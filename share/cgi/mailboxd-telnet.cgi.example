@@ -1,0 +1,21 @@
+#!/bin/sh
+# Example CGI bridge: mailboxd-telnet to local MailboxD (telnet transport).
+# The web front-end is PRTERM, and PRTERM talks to MailboxD over a
+# unix-domain socket. PRTERM is the canonical way to use MailboxD from
+# a browser. This CGI exists for the rare operator who wants a quick
+# telnet-only access in the browser without PRTERM.
+#
+# Install: copy to cgi-bin, chmod +x, set MAILBOXD_TELNET and paths below.
+
+MAILBOXD_TELNET="${MAILBOXD_TELNET:-/usr/local/mailboxd/mailboxd-telnet}"
+HOST="${MAILBOXD_HOST:-127.0.0.1}"
+PORT="${MAILBOXD_PORT:-2323}"
+
+printf 'Content-Type: text/plain; charset=utf-8\r\n\r\n'
+
+if [ ! -x "$MAILBOXD_TELNET" ]; then
+    printf 'mailboxd-telnet not found\n'
+    exit 1
+fi
+
+exec "$MAILBOXD_TELNET" -H "$HOST" -p "$PORT" --pace no

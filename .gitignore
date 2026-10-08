@@ -1,0 +1,29 @@
+# Build artifacts
+build/
+build-*/
+bin/
+out/
+logs/
+data/
+local/*
+!local/README.md
+local/mailboxd.ini
+share/keys/
+shared/keys/
+share/data-proxy/
+share/data-secondary/
+cmake-build-*/
+.cursor/cache/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+compile_commands.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# vault/agent — never ship
+AGENT-INDEX.md

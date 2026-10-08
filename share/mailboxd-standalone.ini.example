@@ -1,0 +1,69 @@
+; MailboxD — Standalone Main (single-host mailbox; no radio side)
+; Copy: cp share/mailboxd-standalone.ini.example mailboxd.ini
+; RF is PRTERM's business — MailboxD has no TNC/modem/serial code; it is
+; reached from PRTERM over the mailboxd_prterm unix socket, or directly
+; via mailboxd-telnet for CLI access.
+; Docs: docs/MANUAL.md · docs/TOPOLOGY.md
+
+[instance]
+standalone = yes
+
+[service]
+name = MailboxD
+; Process owner — required when started as root (mailboxd must not stay root)
+user = mailboxd
+group = mailboxd
+login_announce = no
+; login_announce = yes  — "*** User login: user@plugin" (not Guest; not invisible Sysop);
+;                         /who and /online list as user@plugin
+
+[storage]
+backend = flatfile
+path = data
+
+[auth]
+auto_login = yes
+
+[traffic]
+baud = 2400
+line_width = 80
+pace_output = yes
+ansi = no
+
+[log]
+enabled = yes
+dir = logs
+level = warn
+
+
+[monitor]
+enabled = yes
+follow_mailboxd = yes
+follow_security = yes
+invisible-sysop = no
+invite_timeout_sec = 20
+; allow = Alice,Bob
+; invisible-sysop = yes  — Sysop always hidden from /who (even without /monitor on)
+
+[security]
+enabled = yes
+telnet = yes
+
+[mail]
+enabled = yes
+path = mail
+
+[networks]
+; Standalone Main: local user telnet
+telnet = yes
+
+; Entertain area (chess built-in) — Main / standalone Main only
+[entertain]
+enabled = yes
+
+[transport.telnet]
+bind = 127.0.0.1
+port = 2323
+
+[broadcast]
+enabled = yes

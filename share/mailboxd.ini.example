@@ -1,0 +1,13 @@
+; MailboxD — INI topology
+;
+; One binary, one local BBX:
+;
+;   mailboxd — local BBX; telnet for CLI users; PRTERM <-> MailboxD link
+;              over a unix-domain socket (mailboxd_prterm plugin). No
+;              radio side — RF is entirely PRTERM's business.
+;
+; Templates:
+;   mailboxd-main.ini.example        Main install (lives alongside PRTERM)
+;   mailboxd-standalone.ini.example  Single-host mailbox, no PRTERM
+;
+; Default install: mailboxd-main.ini.example → mailboxd.ini

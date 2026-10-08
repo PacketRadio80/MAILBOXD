@@ -1,0 +1,69 @@
+; MailboxD Main — binary: mailboxd
+; Local BBX (users/mail/chat). PRTERM is the only web front-end; the link
+; between PRTERM and MailboxD runs over a unix-domain socket under
+; /var/mailboxd (see [transport.mailboxd_prterm] below). External users
+; connect via `mailboxd-telnet 127.0.0.1 2323`. A PRTERM-side telnet
+; plugin for tcp-remote connections is planned but not in tree.
+; Copy: cp share/mailboxd-main.ini.example local/mailboxd.ini
+
+[service]
+name = MailboxD
+; Required when mailboxd is started as root — process drops here before plugins bind
+user = nobody
+group = nogroup
+login_announce = no
+
+[storage]
+backend = flatfile
+path = data
+
+[auth]
+auto_login = yes
+
+[traffic]
+baud = 2400
+line_width = 80
+pace_output = yes
+ansi = no
+
+[log]
+enabled = yes
+dir = logs
+level = warn
+
+[monitor]
+enabled = yes
+follow_mailboxd = yes
+follow_security = yes
+invisible-sysop = no
+invite_timeout_sec = 20
+
+[security]
+enabled = yes
+telnet = no
+
+[mail]
+enabled = yes
+path = mail
+
+[networks]
+; No user telnet directly on Main - that goes through PRTERM (or a
+; future PRTERM telnet plugin for tcp-remote users).
+telnet = no
+
+; Entertain area (chess built-in) — Main / standalone Main only
+[entertain]
+enabled = yes
+
+; PRTERM <-> MailboxD link. PRTERM connects here as a node and asks
+; for the user list, mail, status, etc. The socket file is created
+; by MailboxD at startup with mode 0660 owner=user/group from [service].
+; PRTERM must be in the same group (group = nogroup) or in a supplementary
+; group with read+write on the path.
+[transport.mailboxd_prterm]
+enabled = yes
+bind = /var/mailboxd/prterm.sock
+mode = 0660
+; Shared secret with PRTERM. PRTERM's [mailboxd] link_token in prterm.ini
+; must match this value. Rotate both sides together.
+link_token = changeme

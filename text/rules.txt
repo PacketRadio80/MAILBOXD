@@ -1,0 +1,50 @@
+MailboxD — Terms of use (v1.0.0)
+
+MailboxD is a session service for low-bandwidth links: mail, chat,
+conference, and commands over telnet, SSH, or WebSocket. MailboxD has
+no radio side; RF reaches users through PRTERM, and on-air use depends
+on your site and licence.
+
+1. Your responsibility
+Access is at your own risk. You answer for what you send, post, and do
+on this system and on the air. The operator is not responsible for how
+users or link partners behave.
+
+2. Identity
+Real names are not required. A nickname or amateur callsign is enough.
+For RF and circuit links, your CALL or link identity (CALLID) must be
+truthful where your licence or local rules require it. Account data used
+for administration may be seen by Sysop or Admin only.
+
+3. Data
+User data is not sold. Mail and accounts remain on this host unless
+disclosure is required by law.
+
+4. Logging and security
+Sessions and security events may be recorded (for example in
+security.log) to run the service, fix faults, and limit abuse.
+
+MailboxD may temporarily block an IP address, a callsign, or a circuit
+link identity (CALLID) after repeated login failures, link-auth
+failures, connection flooding, or other clear abuse. Blocks are short
+cool-downs by default, not permanent bans. Normal chat and mail traffic
+is only paced or size-limited — busy use on a slow link is expected and
+does not by itself trigger a block.
+
+5. Spam and traffic limits
+Message length, mail quotas, output pacing, and similar limits keep the
+system usable on slow links. They are not punishment. Only repeated,
+excessive spam or misuse may lead to a security block as in section 4.
+
+6. Acceptable use
+Do not break the law. Do not engage in non-social behaviour: threats,
+harassment, hate, or deliberate disruption of others. Do not attempt
+to break into accounts, flood logins, or damage the system or its users.
+Unlawful content or conduct may be reported to authorities where required.
+
+Sysop, Admin, and automated security may limit, block, or revoke access without
+prior notice when abuse is evident.
+
+7. Changes
+The operator may revise this notice in text/rules.txt. Read the current
+text anytime with /rules or /legal.

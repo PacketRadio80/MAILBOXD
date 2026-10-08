@@ -1,0 +1,11 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+set(MAILBOXD_VERSION @PROJECT_VERSION@)
+
+if(NOT TARGET MailboxD::core)
+    include("${CMAKE_CURRENT_LIST_DIR}/MailboxDTargets.cmake")
+endif()
+
+check_required_components(MailboxD)

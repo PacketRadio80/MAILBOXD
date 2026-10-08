@@ -1,0 +1,3 @@
+MailboxD 1.0.0 — First release. Mailbox and BBS of the PRTERM stack: mail,
+chat, conference and the / commands. User access through telnet and websocket.
+No radio side: RF is PRTERM's business. See the manual in docs/.

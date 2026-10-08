@@ -1,0 +1,19 @@
+MailboxD third-party notices
+============================
+
+MailboxD is Free Software: Non-Profit GNU/GPLv3 and newer Software/Data.
+See LICENSE.txt and NON-PROFIT in the installation root.
+
+This build links against, and vendors, components that are not part of
+MailboxD's own authorship. They keep their own licenses.
+
+  Vendored source ..... third_party/  (Monocypher, tiny-AES-c, tinysha256)
+  Linked libraries .... SQLite, OpenSSL, libsodium, pthreads
+
+The full list, with upstream references and exact license identifiers, is in:
+
+  THIRD-PARTY.md
+
+None of those licenses is overridden by the project license. In particular, the
+Monocypher files under third_party/monocypher/ remain dual-licensed
+BSD-2-Clause OR CC0-1.0 and must not be relicensed.

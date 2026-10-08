@@ -1,0 +1,77 @@
+# MailboxD menu layout — areas, per-level menu, and full index.
+# Command help, aliases, access, and account rights: commands.yaml (loaded after).
+
+meta:
+  menu_header: "MailboxD commands /help <cmd> for more"
+  index_header: "MailboxD command-index /help <cmd> for more"
+  alias_header: "MailboxD aliases /help <cmd> for more"
+
+user_groups:
+  - Sysop
+  - Admin
+  - Mod
+  - User
+  - Guest
+
+areas:
+  - label: General
+    commands: [help, menu, index, alias, news, banner, motd, rules, who, users, session, version]
+  - label: Screen
+    commands: [clear, echo]
+  - label: Areas
+    commands: [leave, main, chat, conference, mail, exit]
+  - label: Account
+    commands: [login, changeme, register, deleteme]
+  - label: Admin
+    commands: [usercreate, activate, changeuser, promote, demote, delete]
+  - label: Monitor
+    commands: [monitor]
+  - label: Entertain
+    commands: [chess, aichat]
+  - label: Sysop
+    commands: [deleteuser, shutdown, restart, broadcast]
+
+menu:
+  Guest:
+    - General
+    - Screen
+    - Account
+    - Areas
+  User:
+    - General
+    - Screen
+    - Areas
+    - Account
+    - Entertain
+  Mod:
+    - General
+    - Screen
+    - Areas
+    - Account
+    - Entertain
+  Admin:
+    - General
+    - Screen
+    - Areas
+    - Account
+    - Admin
+    - Entertain
+  Sysop:
+    - General
+    - Screen
+    - Areas
+    - Account
+    - Admin
+    - Monitor
+    - Entertain
+    - Sysop
+
+index:
+  - General
+  - Screen
+  - Areas
+  - Account
+  - Admin
+  - Monitor
+  - Entertain
+  - Sysop

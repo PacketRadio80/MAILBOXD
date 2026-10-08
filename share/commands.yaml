@@ -1,0 +1,315 @@
+# MailboxD command registry — help text, aliases, access levels, account rights.
+# Menu layout and user groups: areas.yaml (loaded first).
+#
+# Help format (2 lines, max 80 cols):
+#   /<verb> placeholders
+#   Help: summary. More: subcommands or aliases
+# No square brackets in session help/menu text.
+
+rights:
+  userchange:
+    - actor: Sysop
+      targets: [Admin, Mod, User]
+    - actor: Admin
+      targets: [Mod, User]
+  userdelete:
+    - actor: Sysop
+      targets: [Admin, Mod, User, Guest]
+  delete:
+    - actor: Sysop
+      targets: [Admin, Mod, User]
+    - actor: Admin
+      targets: [Mod, User]
+  promote:
+    - actor: Sysop
+      to: Admin
+      from: [User, Mod]
+    - actor: Sysop
+      to: Mod
+      from: [User]
+    - actor: Admin
+      to: Mod
+      from: [User]
+  demote:
+    - actor: Sysop
+      from: [Admin, Mod]
+    - actor: Admin
+      from: [Mod]
+
+aliases:
+  help:
+    - "?"
+    - command
+    - cmd
+    - commands
+  banner:
+    - loginmsg
+  rules:
+    - legal
+  who:
+    - online
+  version:
+    - ver
+  session:
+    - info
+  leave:
+    - back
+  clear:
+    - cls
+    - reset
+  exit:
+    - logout
+    - bye
+    - quit
+  delete:
+    - del
+  conference:
+    - meeting
+  usercreate:
+    - createuser
+  changeuser:
+    - userchange
+  deleteuser:
+    - userdelete
+  broadcast:
+    - announce
+  aichat:
+    - ai
+    - ask
+  monitor:
+    - mon
+  chess:
+    - play
+    - mv
+
+commands:
+  help:
+    group: general
+    min: Guest
+    line1: "/help cmd"
+    line2: "Help: Full command-index or /help <cmd>. More: /menu /alias."
+
+  menu:
+    group: general
+    min: Guest
+    line1: "/menu"
+    line2: "Help: Full command-index for this Main. Same as /index."
+
+  index:
+    group: general
+    min: Guest
+    line1: "/index"
+    line2: "Help: Full command-index for this Main. Same as /menu."
+
+  alias:
+    group: general
+    min: Guest
+    line1: "/alias"
+    line2: "Help: Alternate names for commands. More: see /alias output."
+
+  news:
+    group: general
+    min: Guest
+    line1: "/news"
+    line2: "Help: Show system news from news.txt."
+
+  banner:
+    group: general
+    min: Guest
+    line1: "/banner"
+    line2: "Help: Show login banner from banner.txt. More: /loginmsg"
+
+  motd:
+    group: general
+    min: Guest
+    line1: "/motd"
+    line2: "Help: Show message of the day."
+
+  rules:
+    group: general
+    min: Guest
+    line1: "/rules"
+    line2: "Help: Show terms of use from rules.txt. More: /legal"
+
+  who:
+    group: general
+    min: Guest
+    line1: "/who"
+    line2: "Help: Online interactive users (telnet). More: /online"
+
+  users:
+    group: general
+    min: User
+    line1: "/users"
+    line2: "Help: Registered users by level (Sysop Admin Mod User Guest)."
+
+  session:
+    group: general
+    min: Guest
+    line1: "/session"
+    line2: "Help: Username, session id, transport. More: /info"
+
+  version:
+    group: general
+    min: Guest
+    line1: "/version"
+    line2: "Help: Show text/version.txt (@version@ @os@). More: /ver"
+
+  clear:
+    group: screen
+    min: Guest
+    line1: "/clear"
+    line2: "Help: Clear screen and discard input line. More: /cls /reset"
+
+  echo:
+    group: screen
+    min: Guest
+    line1: "/echo yes|no"
+    line2: "Help: Show or set typed-character echo."
+
+  leave:
+    group: areas
+    min: User
+    line1: "/leave"
+    line2: "Help: Up one area level. More: /back"
+
+  main:
+    group: areas
+    min: User
+    line1: "/main"
+    line2: "Help: Return to main prompt."
+
+  chat:
+    group: areas
+    min: User
+    line1: "/chat n|name|show|showall"
+    line2: "Help: Join or list chat channels."
+
+  conference:
+    group: areas
+    min: User
+    line1: "/conference topic user"
+    line2: "Help: Private two-user channel. More: /meeting"
+
+  mail:
+    group: areas
+    min: User
+    line1: "/mail list|read|send|delete|recycle ..."
+    line2: "Help: Personal mailbox on this Main. More: list read send delete"
+
+
+
+  exit:
+    group: areas
+    min: Guest
+    line1: "/exit"
+    line2: "Help: Close connection. More: /quit /logout /bye"
+
+  login:
+    group: account
+    min: Guest
+    line1: "/login username password"
+    line2: "Help: Log in with a registered account."
+
+  register:
+    group: account
+    min: Guest
+    only: Guest
+    line1: "/register user name country location email password"
+    line2: "Help: Self-registration. Guest only. Sysop and Admin notified."
+
+  changeme:
+    group: account
+    min: User
+    line1: "/changeme old new name country location email"
+    line2: "Help: Update own profile and password."
+
+  deleteme:
+    group: account
+    min: User
+    max: Admin
+    line1: "/deleteme yes|no"
+    line2: "Help: Permanently delete own account."
+
+  usercreate:
+    group: admin
+    min: Admin
+    line1: "/usercreate user name country location email"
+    line2: "Help: Create user account. Inactive until /activate. More: /createuser"
+
+  activate:
+    group: admin
+    min: Admin
+    line1: "/activate username"
+    line2: "Help: Set username activated."
+
+  changeuser:
+    group: admin
+    min: Admin
+    line1: "/changeuser user name country location email password"
+    line2: "Help: Overwrite user profile and password. More: /userchange"
+
+  promote:
+    group: admin
+    min: Admin
+    line1: "/promote username admin|mod"
+    line2: "Help: Raise user to Admin or Mod."
+
+  demote:
+    group: admin
+    min: Admin
+    line1: "/demote username"
+    line2: "Help: Set user to User level."
+
+  delete:
+    group: admin
+    min: Admin
+    line1: "/delete username"
+    line2: "Help: Permanently remove account. More: /del"
+
+  deleteuser:
+    group: sysop
+    min: Sysop
+    line1: "/deleteuser username"
+    line2: "Help: Delete any non-Sysop account. More: /userdelete"
+
+  shutdown:
+    group: sysop
+    min: Sysop
+    line1: "/shutdown"
+    line2: "Help: Stop the MailboxD daemon."
+
+  restart:
+    group: sysop
+    min: Sysop
+    line1: "/restart"
+    line2: "Help: Restart the MailboxD daemon."
+
+  broadcast:
+    group: sysop
+    min: Sysop
+    line1: "/broadcast message"
+    line2: "Help: Local +++ announce to all online users. More: /announce"
+
+  monitor:
+    group: monitor
+    min: Sysop
+    line1: "/monitor on|off|list|cmds|meet <user> [force]"
+    line2: "Help: Live log follow + online list; /monitor cmds for admin verbs. Alias: /mon"
+
+  chess:
+    group: entertain
+    min: User
+    line1: "/chess new|join|watch|move|board|resign|draw|list|leave|clear"
+    line2: "Help: Entertain chess (Main). Moves: /chess move e2 e4 or /mv e2e4. Alias: /play"
+
+
+  aichat:
+    group: entertain
+    min: User
+    line1: "/aichat question or prompt"
+    line2: "Help: Ask AI assistant via OpenRouter. Aliases: /ai, /ask"
+
+
+
+

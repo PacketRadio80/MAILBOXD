@@ -1,0 +1,27 @@
+# Example fail2ban jails for MailboxD security.log
+#
+# MailboxD v2.0.0+ includes built-in [security] bans — these filters are optional
+# for site-wide iptables/nftables integration alongside the daemon.
+#
+# 1. Copy filter.d/*.conf to /etc/fail2ban/filter.d/
+# 2. Copy this file to /etc/fail2ban/jail.d/mailboxd.local
+# 3. Set logpath to your MailboxD logs directory ([log] dir in mailboxd.ini)
+# 4. sudo fail2ban-client reload
+
+[mailboxd-telnet]
+enabled = true
+filter = mailboxd-telnet
+port = 2323
+logpath = /usr/local/mailboxd/logs/security.log
+maxretry = 5
+findtime = 600
+bantime = 600
+
+# PRTERM<->MailboxD link is unix-domain; fail2ban watches the access log.
+[mailboxd-prterm]
+enabled = true
+filter = mailboxd-prterm
+logpath = /usr/local/mailboxd/logs/security.log
+maxretry = 5
+findtime = 600
+bantime = 600
