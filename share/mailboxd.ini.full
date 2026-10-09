@@ -6,7 +6,7 @@
 
 ; ─── [service] ─ Daemon identity and privilege ──────────────────────────
 [service]
-name            = MGHBX1              ; Station callsign (banners, logs)
+name            = MAILBX              ; Station callsign (banners, logs)
 user            = lighttpd            ; Drop-privilege user after port bind
 group           = lighttpd            ; Drop-privilege group
 login_announce  = no                  ; Notify other users on login/logout
@@ -85,8 +85,8 @@ enabled         = yes                 ; /broadcast (announce to all online)
 ; ─── [beacon] ─ Autonomous CQ beacon ──────────────────────────────────
 [beacon]
 enabled         = yes                 ; Periodic CQ via PRTERM?
-callerid        = MGHBX1              ; AX.25 source callsign
-msg             = MGHBX1 = online     ; Beacon text (over-the-air)
+callerid        = MAILBX              ; AX.25 source callsign
+msg             = MAILBX = online     ; Beacon text (over-the-air)
 interval        = 150                 ; Min seconds between beacons (≥150)
 prterm_url      = http://127.0.0.1/prterm.cgi  ; PRTERM CGI for mbox_cqbeacon POST
 
