@@ -28,6 +28,7 @@
 #include "mailboxd/beacon.h"
 #include "mailboxd/config.h"
 #include "mailboxd/log.h"
+#include "mailboxd/socket.h"
 #include "mailboxd/util.h"
 
 #include <errno.h>
@@ -39,6 +40,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 
@@ -385,14 +387,19 @@ static void *beacon_thread(void *arg)
              "/var/mailboxd/prterm.sock");
 
     long long rx_last_ts = 0;          /* epoch of last processed RX frame */
-    unsigned  beacon_tick = g_cfg.interval; /* fires immediately on first cycle */
+    time_t    last_cq = 0;            /* epoch of last CQ beacon transmit */
+    unsigned  rx_tick = RX_POLL_SEC;  /* fires immediately on first cycle */
+
+    /* Use wall-clock time for CQ interval — the RX poll loop can
+     * take many seconds per iteration (HTTP POST + bridge ops),
+     * so counting iterations would delay the beacon by hours. */
+    last_cq = time(NULL) - (time_t)g_cfg.interval;  /* fire immediately */
 
     while (g_running) {
         sleep(1);
         if (!g_running) break;
 
         /* ── RX poll (every RX_POLL_SEC seconds) ─────────────────── */
-        static unsigned rx_tick;
         rx_tick++;
         if (rx_tick >= RX_POLL_SEC) {
             rx_tick = 0;
@@ -450,10 +457,10 @@ static void *beacon_thread(void *arg)
             }
         }
 
-        /* ── CQ beacon (every `interval` seconds) ────────────────── */
-        beacon_tick++;
-        if (beacon_tick < g_cfg.interval) continue;
-        beacon_tick = 0;
+        /* ── CQ beacon (every `interval` seconds, wall-clock) ─── */
+        time_t now = time(NULL);
+        if ((now - last_cq) < (time_t)g_cfg.interval) continue;
+        last_cq = now;
 
         char enc_cid[128];
         url_encode(g_cfg.callerid, enc_cid, sizeof enc_cid);
