@@ -1,5 +1,5 @@
 # MailboxD · 1.0.0
-**Official MailboxD Instance - telnet://mailbx1.space:2323**
+**Official MailboxD Instance - telnet://mailbx1.space:2323**<br>
 <br>
 **MailboxD** is the mailbox and BBS (BBX) of the PRTERM stack: mail, chat,
 conference and the `/` commands in plain-text sessions. It is standalone
