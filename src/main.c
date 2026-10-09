@@ -17,6 +17,7 @@
 #include "mailboxd/mailboxd.h"
 #include "mailboxd/instance.h"
 #include "mailboxd/service.h"
+#include "mailboxd/beacon.h"
 #include "mailboxd/registry.h"
 #include "mailboxd/config.h"
 #include "mailboxd/command.h"
@@ -363,6 +364,11 @@ int main(int argc, char *argv[])
 
         printf("Available transport plugins:\n");
         mailboxd_registry_foreach(list_plugins_cb, NULL);
+
+        /* Start the beacon daemon if configured. */
+        if (mailboxd_beacon_start(&config) != MAILBOXD_OK) {
+            fprintf(stderr, "Warning: beacon daemon failed to start\n");
+        }
     } else {
         fprintf(stderr,
                 "No configuration loaded. Use -c <mailboxd.ini>, set MAILBOXD_CONFIG, "
@@ -395,6 +401,7 @@ int main(int argc, char *argv[])
     if (have_config) {
         mailboxd_config_free(&config);
     }
+    mailboxd_beacon_stop();
     mailboxd_commands_registry_shutdown();
     mailboxd_service_destroy(service);
 

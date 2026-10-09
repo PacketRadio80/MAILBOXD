@@ -6,6 +6,7 @@ if(MAILBOXD_BUILD_DAEMON)
         core/instance.c
         core/bandwidth_policy.c
         core/broadcast.c
+        core/beacon.c
         core/command.c
         core/command_parse.c
         core/commands_registry.c
