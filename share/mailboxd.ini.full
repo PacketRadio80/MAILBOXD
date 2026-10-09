@@ -1,171 +1,114 @@
-; MailboxD 1.0.0 — Full reference configuration (mailboxd.ini.full)
+; MailboxD 1.0.0 — Complete configuration reference
+; Packet-radio BBS / mailbox daemon for amateur radio.
 ;
-; Every configurable option with defaults and documentation.
-; Copy sections you need to mailboxd.ini — MailboxD reads that file
-; at startup.  Missing keys fall back to compiled-in defaults.
-;
-; Last updated: 2026-10-09 — AM1PR (FreeBSD 15.1)
+; Copy sections you need to mailboxd.ini.  Missing keys use compiled-in
+; defaults.  INI format: [section] headers, key = value pairs, ; comments.
 
-; ─── Service ───────────────────────────────────────────────────────────
+; ─── [service] ─ Daemon identity and privilege ──────────────────────────
 [service]
-; Display name used in banners and log lines.
-name = MGHBX1
-; Unix user/group the daemon drops to after binding ports.
-user = lighttpd
-group = lighttpd
-; Show "connected" / "disconnected" to other online users?
-login_announce = no
-; "MGHBX1> " style prompt sent after each command.  Empty = no prompt.
-prompt = 
-; Maximum simultaneous online sessions (0 = no limit).
-max_online = 0
-; Number of virtual "nodes" for capacity display (cosmetic).
-nodes = 0
+name            = MGHBX1              ; Station callsign (banners, logs)
+user            = lighttpd            ; Drop-privilege user after port bind
+group           = lighttpd            ; Drop-privilege group
+login_announce  = no                  ; Notify other users on login/logout
+prompt          =                     ; Command prompt string (empty = off)
+max_online      = 0                   ; Max simultaneous sessions (0 = ∞)
+nodes           = 0                   ; Virtual node count for /nodes display
 
-; ─── Storage ───────────────────────────────────────────────────────────
+; ─── [storage] ─ User/account database ─────────────────────────────────
 [storage]
-; Backend: flatfile | sqlite
-backend = sqlite
-; Data directory (relative to install root, or absolute).
-path = data
+backend         = sqlite              ; sqlite | flatfile
+path            = data                ; DB dir (relative to install root)
 
-; ─── Auth ──────────────────────────────────────────────────────────────
+; ─── [auth] ─ Login behaviour ──────────────────────────────────────────
 [auth]
-; Auto-login: connect → guest session immediately (no login prompt).
-; no = user must /login first.
-auto_login = yes
-; Guest username prefix — guests get prefix+1, prefix+2, etc.
-guest_prefix = Guest
+auto_login      = yes                 ; yes → guest session on connect
+                                      ; no  → login prompt on connect
+guest_prefix    = Guest               ; Guest username prefix (Guest1, …)
 
-; ─── Traffic ───────────────────────────────────────────────────────────
+; ─── [traffic] ─ Output pacing and display ─────────────────────────────
 [traffic]
-; Simulated serial baud for output pacing (0 = off).
-baud = 2400
-; Display line width for output wrapping (0 = off).
-line_width = 80
-; Pace output to simulate baud rate? yes|no
-pace_output = yes
-; Allow ANSI escape sequences? yes|no
-ansi = no
+baud            = 2400                ; Simulated baud for pacing (0 = off)
+line_width      = 80                  ; Display wrap width (0 = no wrap)
+pace_output     = yes                 ; Throttle output to baud rate?
+ansi            = no                  ; Allow ANSI escape sequences?
 
-; ─── Log ───────────────────────────────────────────────────────────────
+; ─── [log] ─ Logging ──────────────────────────────────────────────────
 [log]
-; Enable file logging? yes|no
-enabled = yes
-; Log directory (relative to install root, or absolute).
-dir = logs
-; Level: off | error | warn | info | debug | trace
-level = warn
+enabled         = yes                 ; Enable file logging?
+dir             = logs                ; Log directory (relative to root)
+level           = warn                ; off|error|warn|info|debug|trace
 
-; ─── Monitor ───────────────────────────────────────────────────────────
+; ─── [monitor] ─ Sysop session monitor ─────────────────────────────────
 [monitor]
-; Enable /monitor command for sysop? yes|no
-enabled = yes
-; Follow MailboxD session events? yes|no
-follow_mailboxd = yes
-; Follow security ban/unban events? yes|no
-follow_security = yes
-; Hide sysop from /who list? yes|no
-invisible-sysop = yes
-; Seconds before monitor invite expires (5-300).
-invite_timeout_sec = 20
-; Comma-separated usernames allowed to /monitor (empty = all sysops).
-allow = 
+enabled         = yes                 ; /monitor command available?
+follow_mailboxd = yes                 ; Follow mailbox session events
+follow_security = yes                 ; Follow ban/unban events
+invisible-sysop = yes                 ; Hide sysop from /who
+invite_timeout_sec = 20               ; Monitor invite timeout (5–300)
+allow           =                     ; Allowed users (comma-sep, empty = all sysops)
 
-; ─── Security ──────────────────────────────────────────────────────────
+; ─── [security] ─ Login throttling ─────────────────────────────────────
 [security]
-; Enable fail2ban-style login throttling? yes|no
-enabled = yes
-; Enable ban tracking for telnet connections? yes|no
-telnet = yes
+enabled         = yes                 ; Fail2ban-style login throttle
+telnet          = yes                 ; Track telnet login failures
 
-; ─── Mail ──────────────────────────────────────────────────────────────
+; ─── [mail] ─ User mailbox ────────────────────────────────────────────
 [mail]
-; Enable /mail system? yes|no
-enabled = yes
-; Storage subdirectory (flatfile) or table prefix (sqlite).
-path = mail
-; Max messages per inbox.
-max_messages = 50
-; Max subject length (characters).
-subject_max = 72
-; Max body length (lines).
-body_max = 64
-; Days before recycle-bin messages are purged (1-365).
-recycle_days = 30
+enabled         = yes                 ; /mail available?
+path            = mail                ; Storage subdir (flatfile) or table prefix (sqlite)
+max_messages    = 50                  ; Max messages per inbox
+subject_max     = 72                  ; Subject line max length
+body_max        = 64                  ; Body max lines
+recycle_days    = 30                  ; Days before deleted messages purge (1–365)
 
-; ─── Networks ──────────────────────────────────────────────────────────
+; ─── [networks] ─ Transport availability ───────────────────────────────
 [networks]
-; Enable telnet transport (requires [transport.telnet])? yes|no
-telnet = yes
+telnet          = yes                 ; Enable telnet transport
 
-; ─── Entertain ─────────────────────────────────────────────────────────
+; ─── [entertain] ─ Games and AI ────────────────────────────────────────
 [entertain]
-; Enable /chess and /aichat? yes|no
-enabled = yes
+enabled         = yes                 ; /chess and /aichat available?
 
-; ─── Chat ──────────────────────────────────────────────────────────────
+; ─── [chat] ─ Live chat channels ───────────────────────────────────────
 [chat]
-; Number of chat channels (1-12).
-channels = 4
-; Max message length per chat line.
-message_max = 256
-; Custom channel names (default: channel1..4).  Unset = numeric.
-; channel1 = Local
-; channel2 = DX
-; channel3 = Tech
-; channel4 = Ragchew
+channels        = 4                   ; Number of channels (1–12)
+message_max     = 256                 ; Max message length
+; channel1     = Local               ; Custom name (default: channel1)
+; channel2     = DX
+; channel3     = Tech
+; channel4     = Ragchew
 
-; ─── Broadcast ─────────────────────────────────────────────────────────
+; ─── [broadcast] ─ Local announces ─────────────────────────────────────
 [broadcast]
-; Enable /broadcast (local announce to all online users)? yes|no
-enabled = yes
+enabled         = yes                 ; /broadcast (announce to all online)
 
-; ─── Beacon (autonomous CQ) ────────────────────────────────────────────
+; ─── [beacon] ─ Autonomous CQ beacon ──────────────────────────────────
 [beacon]
-; Send periodic CQ via PRTERM? yes|no
-enabled = yes
-; AX.25 source callsign for beacon frames.
-callerid = MGHBX1
-; Beacon text (freeform, sent over-the-air).
-msg = MGHBX1 = online
-; Minimum seconds between CQ beacons (≥150, enforced).
-interval = 150
-; PRTERM CGI URL for mbox_cqbeacon POST.
-prterm_url = http://127.0.0.1/prterm.cgi
+enabled         = yes                 ; Periodic CQ via PRTERM?
+callerid        = MGHBX1              ; AX.25 source callsign
+msg             = MGHBX1 = online     ; Beacon text (over-the-air)
+interval        = 150                 ; Min seconds between beacons (≥150)
+prterm_url      = http://127.0.0.1/prterm.cgi  ; PRTERM CGI for mbox_cqbeacon POST
 
-; ─── Crypto ────────────────────────────────────────────────────────────
+; ─── [crypto] ─ Cryptographic backends ─────────────────────────────────
 [crypto]
-; Password hashing backend: openssl | tinysha256
-; (auto-fallback if openssl not built in)
-; password_hash = openssl
-; AES-GCM backend: openssl | tinyaes
-; aes_gcm = openssl
-; X25519 key exchange backend: openssl | curve25519-donna
-; x25519 = openssl
-; Random bytes backend: openssl | arc4random | urandom
-; random = openssl
+; password_hash = openssl             ; openssl | tinysha256
+; aes_gcm       = openssl             ; openssl | tinyaes
+; x25519        = openssl             ; openssl | curve25519-donna
+; random        = openssl             ; openssl | arc4random | urandom
 
-; ─── Transport: PRTERM link ────────────────────────────────────────────
+; ─── [transport.mailboxd_prterm] ─ PRTERM unix-socket bridge ──────────
 [transport.mailboxd_prterm]
-; Enable unix-socket bridge to PRTERM? yes|no
-enabled = yes
-; Socket path (created at startup).
-bind = /var/mailboxd/prterm.sock
-; Socket file permissions (octal).
-mode = 0660
-; Shared secret — PRTERM's [mailboxd] link_token must match.
-link_token = CHANGE_ME_TO_A_RANDOM_HEX
+enabled         = yes                 ; PRTERM link active?
+bind            = /var/mailboxd/prterm.sock  ; Socket path
+mode            = 0660                ; Socket permissions (octal)
+link_token      = CHANGE_ME_TO_RANDOM_HEX   ; Must match prterm.ini [mailboxd] link_token
 
-; ─── Transport: Telnet ─────────────────────────────────────────────────
+; ─── [transport.telnet] ─ Telnet server ───────────────────────────────
 [transport.telnet]
-; Bind address for the telnet listener.
-bind = 0.0.0.0
-; Port for the telnet listener.
-port = 2323
+bind            = 0.0.0.0             ; Listen address
+port            = 2323                ; Listen port
 
-; ─── Texts ─────────────────────────────────────────────────────────────
+; ─── [texts] ─ Banner/MOTD/news files ─────────────────────────────────
 [texts]
-; Directory for banner.txt, motd.txt, news.txt, rules.txt, version.txt
-; (relative to install root, or absolute).
-; path = text
+; path          = text                ; Dir for banner.txt, motd.txt, news.txt, rules.txt
