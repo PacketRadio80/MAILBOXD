@@ -1,0 +1,171 @@
+; MailboxD 1.0.0 — Full reference configuration (mailboxd.ini.full)
+;
+; Every configurable option with defaults and documentation.
+; Copy sections you need to mailboxd.ini — MailboxD reads that file
+; at startup.  Missing keys fall back to compiled-in defaults.
+;
+; Last updated: 2026-10-09 — AM1PR (FreeBSD 15.1)
+
+; ─── Service ───────────────────────────────────────────────────────────
+[service]
+; Display name used in banners and log lines.
+name = MGHBX1
+; Unix user/group the daemon drops to after binding ports.
+user = lighttpd
+group = lighttpd
+; Show "connected" / "disconnected" to other online users?
+login_announce = no
+; "MGHBX1> " style prompt sent after each command.  Empty = no prompt.
+prompt = 
+; Maximum simultaneous online sessions (0 = no limit).
+max_online = 0
+; Number of virtual "nodes" for capacity display (cosmetic).
+nodes = 0
+
+; ─── Storage ───────────────────────────────────────────────────────────
+[storage]
+; Backend: flatfile | sqlite
+backend = sqlite
+; Data directory (relative to install root, or absolute).
+path = data
+
+; ─── Auth ──────────────────────────────────────────────────────────────
+[auth]
+; Auto-login: connect → guest session immediately (no login prompt).
+; no = user must /login first.
+auto_login = yes
+; Guest username prefix — guests get prefix+1, prefix+2, etc.
+guest_prefix = Guest
+
+; ─── Traffic ───────────────────────────────────────────────────────────
+[traffic]
+; Simulated serial baud for output pacing (0 = off).
+baud = 2400
+; Display line width for output wrapping (0 = off).
+line_width = 80
+; Pace output to simulate baud rate? yes|no
+pace_output = yes
+; Allow ANSI escape sequences? yes|no
+ansi = no
+
+; ─── Log ───────────────────────────────────────────────────────────────
+[log]
+; Enable file logging? yes|no
+enabled = yes
+; Log directory (relative to install root, or absolute).
+dir = logs
+; Level: off | error | warn | info | debug | trace
+level = warn
+
+; ─── Monitor ───────────────────────────────────────────────────────────
+[monitor]
+; Enable /monitor command for sysop? yes|no
+enabled = yes
+; Follow MailboxD session events? yes|no
+follow_mailboxd = yes
+; Follow security ban/unban events? yes|no
+follow_security = yes
+; Hide sysop from /who list? yes|no
+invisible-sysop = yes
+; Seconds before monitor invite expires (5-300).
+invite_timeout_sec = 20
+; Comma-separated usernames allowed to /monitor (empty = all sysops).
+allow = 
+
+; ─── Security ──────────────────────────────────────────────────────────
+[security]
+; Enable fail2ban-style login throttling? yes|no
+enabled = yes
+; Enable ban tracking for telnet connections? yes|no
+telnet = yes
+
+; ─── Mail ──────────────────────────────────────────────────────────────
+[mail]
+; Enable /mail system? yes|no
+enabled = yes
+; Storage subdirectory (flatfile) or table prefix (sqlite).
+path = mail
+; Max messages per inbox.
+max_messages = 50
+; Max subject length (characters).
+subject_max = 72
+; Max body length (lines).
+body_max = 64
+; Days before recycle-bin messages are purged (1-365).
+recycle_days = 30
+
+; ─── Networks ──────────────────────────────────────────────────────────
+[networks]
+; Enable telnet transport (requires [transport.telnet])? yes|no
+telnet = yes
+
+; ─── Entertain ─────────────────────────────────────────────────────────
+[entertain]
+; Enable /chess and /aichat? yes|no
+enabled = yes
+
+; ─── Chat ──────────────────────────────────────────────────────────────
+[chat]
+; Number of chat channels (1-12).
+channels = 4
+; Max message length per chat line.
+message_max = 256
+; Custom channel names (default: channel1..4).  Unset = numeric.
+; channel1 = Local
+; channel2 = DX
+; channel3 = Tech
+; channel4 = Ragchew
+
+; ─── Broadcast ─────────────────────────────────────────────────────────
+[broadcast]
+; Enable /broadcast (local announce to all online users)? yes|no
+enabled = yes
+
+; ─── Beacon (autonomous CQ) ────────────────────────────────────────────
+[beacon]
+; Send periodic CQ via PRTERM? yes|no
+enabled = yes
+; AX.25 source callsign for beacon frames.
+callerid = MGHBX1
+; Beacon text (freeform, sent over-the-air).
+msg = MGHBX1 = online
+; Minimum seconds between CQ beacons (≥150, enforced).
+interval = 150
+; PRTERM CGI URL for mbox_cqbeacon POST.
+prterm_url = http://127.0.0.1/prterm.cgi
+
+; ─── Crypto ────────────────────────────────────────────────────────────
+[crypto]
+; Password hashing backend: openssl | tinysha256
+; (auto-fallback if openssl not built in)
+; password_hash = openssl
+; AES-GCM backend: openssl | tinyaes
+; aes_gcm = openssl
+; X25519 key exchange backend: openssl | curve25519-donna
+; x25519 = openssl
+; Random bytes backend: openssl | arc4random | urandom
+; random = openssl
+
+; ─── Transport: PRTERM link ────────────────────────────────────────────
+[transport.mailboxd_prterm]
+; Enable unix-socket bridge to PRTERM? yes|no
+enabled = yes
+; Socket path (created at startup).
+bind = /var/mailboxd/prterm.sock
+; Socket file permissions (octal).
+mode = 0660
+; Shared secret — PRTERM's [mailboxd] link_token must match.
+link_token = CHANGE_ME_TO_A_RANDOM_HEX
+
+; ─── Transport: Telnet ─────────────────────────────────────────────────
+[transport.telnet]
+; Bind address for the telnet listener.
+bind = 0.0.0.0
+; Port for the telnet listener.
+port = 2323
+
+; ─── Texts ─────────────────────────────────────────────────────────────
+[texts]
+; Directory for banner.txt, motd.txt, news.txt, rules.txt, version.txt
+; (relative to install root, or absolute).
+; path = text
