@@ -388,12 +388,16 @@ static void *beacon_thread(void *arg)
 
     long long rx_last_ts = 0;          /* epoch of last processed RX frame */
     time_t    last_cq = 0;            /* epoch of last CQ beacon transmit */
+    time_t    last_rx = 0;            /* wall-clock of last detected RX activity */
     unsigned  rx_tick = RX_POLL_SEC;  /* fires immediately on first cycle */
 
     /* Use wall-clock time for CQ interval — the RX poll loop can
      * take many seconds per iteration (HTTP POST + bridge ops),
-     * so counting iterations would delay the beacon by hours. */
-    last_cq = time(NULL) - (time_t)g_cfg.interval;  /* fire immediately */
+     * so counting iterations would delay the beacon by hours.
+     * Fire immediately on startup, then only after `interval`
+     * seconds of radio silence (no RX detected by PRTERM). */
+    last_cq = time(NULL) - (time_t)g_cfg.interval;
+    last_rx = 0;  /* no RX yet → band is silent */
 
     while (g_running) {
         sleep(1);
@@ -428,6 +432,7 @@ static void *beacon_thread(void *arg)
                         if (ts > rx_last_ts) rx_last_ts = ts;
 
                         if (from[0] && text[0]) {
+                            last_rx = time(NULL);  /* band is active */
                             mailboxd_log_info("[beacon] RX from=%s: %.120s",
                                               from, text);
 
@@ -457,9 +462,15 @@ static void *beacon_thread(void *arg)
             }
         }
 
-        /* ── CQ beacon (every `interval` seconds, wall-clock) ─── */
+        /* ── CQ beacon (every `interval` seconds, band must be silent) ── */
         time_t now = time(NULL);
         if ((now - last_cq) < (time_t)g_cfg.interval) continue;
+        /* Require radio silence: no RX frames detected for ≥ interval. */
+        if (last_rx > 0 && (now - last_rx) < (time_t)g_cfg.interval) {
+            mailboxd_log_debug("[beacon] CQ deferred: band active %llds ago",
+                               (long long)(now - last_rx));
+            continue;
+        }
         last_cq = now;
 
         char enc_cid[128];
