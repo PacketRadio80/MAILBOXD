@@ -324,17 +324,17 @@ static void *telnet_client_thread(void *arg)
     mailboxd_session_close(session);
 
     /*
-     * Close the socket cleanly.  The session_close above has already
-     * sent "Goodbye.\r\n" through telnet_write (TCP_NODELAY ensures
-     * immediate delivery).  A single shutdown(SHUT_WR) sends TCP FIN
-     * so the client sees EOF; then close() releases the fd.
+     * Just close the socket.  The kernel will flush any pending
+     * data (including "Goodbye.\r\n") and send TCP FIN, which is
+     * the universal "we're done" signal that all telnet clients
+     * understand — netkit-telnet (FreeBSD/Linux), PuTTY, Windows,
+     * macOS Terminal, and web-based telnet (sshwifty etc.).
      *
-     * We intentionally do NOT drain here — some telnet clients
-     * (notably FreeBSD's and PuTTY) block in send() during the
-     * option negotiation teardown, and a recv() drain loop would
-     * hang the server thread until the client times out.
+     * Do NOT send IAC DO TIMING_MARK — netkit-telnet blocks on
+     * option negotiation completion before processing the FIN,
+     * which hangs the client.  Do NOT drain — some clients hold
+     * the connection open during their own teardown.
      */
-    shutdown(client->fd, SHUT_WR);
     close(client->fd);
     free(client);
     return NULL;
