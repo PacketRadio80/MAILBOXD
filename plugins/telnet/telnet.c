@@ -322,20 +322,6 @@ static void *telnet_client_thread(void *arg)
     }
 
     mailboxd_session_close(session);
-
-    /*
-     * Force the socket closed so all telnet clients (including
-     * netkit-telnet on FreeBSD and Linux) see the connection drop
-     * immediately.  SO_LINGER with timeout=0 causes close() to
-     * send TCP RST instead of FIN, which no client can miss.
-     *
-     * Without this, netkit-telnet polls the fd forever — it does
-     * not react to a bare FIN from close()/shutdown().
-     */
-    {
-        struct linger lg = { .l_onoff = 1, .l_linger = 0 };
-        setsockopt(client->fd, SOL_SOCKET, SO_LINGER, &lg, sizeof lg);
-    }
     close(client->fd);
     free(client);
     return NULL;
