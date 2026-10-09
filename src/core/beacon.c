@@ -48,11 +48,14 @@
 
 #define BEACON_CALLERID_MAX  32
 #define BEACON_URL_MAX       256
+#define BEACON_MSG_MAX       128
+#define BEACON_INTERVAL_MIN  150
 #define RX_POLL_SEC           5
 
 typedef struct beacon_config {
     int        enabled;
     char       callerid[BEACON_CALLERID_MAX];
+    char       msg[BEACON_MSG_MAX];
     unsigned   interval;
     char       prterm_url[BEACON_URL_MAX];
 } beacon_config_t;
@@ -61,7 +64,7 @@ static void beacon_config_defaults(beacon_config_t *bc)
 {
     memset(bc, 0, sizeof *bc);
     bc->enabled  = 0;
-    bc->interval = 150;
+    bc->interval = BEACON_INTERVAL_MIN;
     mailboxd_strlcpy(bc->prterm_url,
                      "http://127.0.0.1/prterm/prterm.cgi",
                      sizeof bc->prterm_url);
@@ -80,12 +83,17 @@ static void beacon_config_load(beacon_config_t *bc,
     if (v[0] != '\0')
         mailboxd_strlcpy(bc->callerid, v, sizeof bc->callerid);
 
-    bc->interval = mailboxd_config_get_uint(config, "beacon",
-                                            "interval", 150, 30, 3600);
-
-    v = mailboxd_config_get(config, "beacon", "prterm_url", "");
+    v = mailboxd_config_get(config, "beacon", "msg", "");
     if (v[0] != '\0')
-        mailboxd_strlcpy(bc->prterm_url, v, sizeof bc->prterm_url);
+        mailboxd_strlcpy(bc->msg, v, sizeof bc->msg);
+    else if (bc->callerid[0] != '\0') {
+        /* Default: "MGHBX1 = online" (callerid = online). */
+        snprintf(bc->msg, sizeof bc->msg, "%s = online", bc->callerid);
+    }
+
+    bc->interval = mailboxd_config_get_uint(config, "beacon",
+                                            "interval", BEACON_INTERVAL_MIN,
+                                            BEACON_INTERVAL_MIN, 3600);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -368,8 +376,8 @@ static void *beacon_thread(void *arg)
 {
     (void)arg;
 
-    mailboxd_log_info("[beacon] daemon started: callerid=%s interval=%us rxpoll=%us url=%s",
-                      g_cfg.callerid, g_cfg.interval, RX_POLL_SEC, g_cfg.prterm_url);
+    mailboxd_log_info("[beacon] daemon started: callerid=%s msg='%s' interval=%us rxpoll=%us url=%s",
+                      g_cfg.callerid, g_cfg.msg, g_cfg.interval, RX_POLL_SEC, g_cfg.prterm_url);
 
     /* PRTERM socket path: derived from the standard layout. */
     char sock_path[256];
@@ -450,9 +458,12 @@ static void *beacon_thread(void *arg)
         char enc_cid[128];
         url_encode(g_cfg.callerid, enc_cid, sizeof enc_cid);
 
-        char body[256];
-        snprintf(body, sizeof body, "action=mbox_cqbeacon&callerid=%s",
-                 enc_cid);
+        char enc_msg[256];
+        url_encode(g_cfg.msg, enc_msg, sizeof enc_msg);
+
+        char body[512];
+        snprintf(body, sizeof body, "action=mbox_cqbeacon&callerid=%s&msg=%s",
+                 enc_cid, enc_msg);
 
         char resp[1024];
         if (http_post(g_cfg.prterm_url, body, resp, sizeof resp) != 0) {
