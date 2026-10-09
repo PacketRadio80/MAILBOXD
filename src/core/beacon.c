@@ -16,7 +16,7 @@
  *   enabled    = yes
  *   callerid   = MGHBX1
  *   interval   = 150          ; CQ beacon cycle (seconds)
- *   prterm_url = http://127.0.0.1/prterm/prterm.cgi
+ *   prterm_url = http://127.0.0.1/prterm.cgi
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
@@ -68,7 +68,7 @@ static void beacon_config_defaults(beacon_config_t *bc)
     bc->enabled  = 0;
     bc->interval = BEACON_INTERVAL_MIN;
     mailboxd_strlcpy(bc->prterm_url,
-                     "http://127.0.0.1/prterm/prterm.cgi",
+                     "http://127.0.0.1/prterm.cgi",
                      sizeof bc->prterm_url);
 }
 
@@ -96,6 +96,10 @@ static void beacon_config_load(beacon_config_t *bc,
     bc->interval = mailboxd_config_get_uint(config, "beacon",
                                             "interval", BEACON_INTERVAL_MIN,
                                             BEACON_INTERVAL_MIN, 3600);
+
+    v = mailboxd_config_get(config, "beacon", "prterm_url", "");
+    if (v[0] != '\0')
+        mailboxd_strlcpy(bc->prterm_url, v, sizeof bc->prterm_url);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -464,14 +468,17 @@ static void *beacon_thread(void *arg)
 
         /* ── CQ beacon (every `interval` seconds, band must be silent) ── */
         time_t now = time(NULL);
-        if ((now - last_cq) < (time_t)g_cfg.interval) continue;
+        long long since_cq = (long long)(now - last_cq);
+        long long since_rx = last_rx > 0 ? (long long)(now - last_rx) : -1;
+        if (since_cq < (long long)g_cfg.interval) continue;
         /* Require radio silence: no RX frames detected for ≥ interval. */
         if (last_rx > 0 && (now - last_rx) < (time_t)g_cfg.interval) {
-            mailboxd_log_debug("[beacon] CQ deferred: band active %llds ago",
-                               (long long)(now - last_rx));
+            mailboxd_log_warn("[beacon] CQ deferred: since_cq=%llds since_rx=%llds",
+                               since_cq, since_rx);
             continue;
         }
         last_cq = now;
+        mailboxd_log_warn("[beacon] CQ fire: since_cq=%llds since_rx=%llds", since_cq, since_rx);
 
         char enc_cid[128];
         url_encode(g_cfg.callerid, enc_cid, sizeof enc_cid);
@@ -483,12 +490,14 @@ static void *beacon_thread(void *arg)
         snprintf(body, sizeof body, "action=mbox_cqbeacon&callerid=%s&msg=%s",
                  enc_cid, enc_msg);
 
+        mailboxd_log_warn("[beacon] CQ POST to %s", g_cfg.prterm_url);
         char resp[1024];
         if (http_post(g_cfg.prterm_url, body, resp, sizeof resp) != 0) {
             mailboxd_log_warn("[beacon] CQ POST failed");
             continue;
         }
         const char *rbody = http_body(resp);
+        mailboxd_log_warn("[beacon] CQ response: %.120s", rbody);
         if (json_is_ok(rbody)) {
             mailboxd_log_info("[beacon] CQ transmitted");
         } else {
