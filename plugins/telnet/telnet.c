@@ -324,17 +324,18 @@ static void *telnet_client_thread(void *arg)
     mailboxd_session_close(session);
 
     /*
-     * Just close the socket.  The kernel will flush any pending
-     * data (including "Goodbye.\r\n") and send TCP FIN, which is
-     * the universal "we're done" signal that all telnet clients
-     * understand — netkit-telnet (FreeBSD/Linux), PuTTY, Windows,
-     * macOS Terminal, and web-based telnet (sshwifty etc.).
+     * Force the socket closed so all telnet clients (including
+     * netkit-telnet on FreeBSD and Linux) see the connection drop
+     * immediately.  SO_LINGER with timeout=0 causes close() to
+     * send TCP RST instead of FIN, which no client can miss.
      *
-     * Do NOT send IAC DO TIMING_MARK — netkit-telnet blocks on
-     * option negotiation completion before processing the FIN,
-     * which hangs the client.  Do NOT drain — some clients hold
-     * the connection open during their own teardown.
+     * Without this, netkit-telnet polls the fd forever — it does
+     * not react to a bare FIN from close()/shutdown().
      */
+    {
+        struct linger lg = { .l_onoff = 1, .l_linger = 0 };
+        setsockopt(client->fd, SOL_SOCKET, SO_LINGER, &lg, sizeof lg);
+    }
     close(client->fd);
     free(client);
     return NULL;
