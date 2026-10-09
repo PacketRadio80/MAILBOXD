@@ -97,7 +97,8 @@ static mailboxd_result_t telnet_reply_will(int fd, uint8_t option)
 {
     switch (option) {
     case TELNET_OPT_SGA:
-        return telnet_send_option(fd, TELNET_DO, option);
+        /* Reject SGA — see mailboxd_telnet_send_greeting() */
+        return telnet_send_option(fd, TELNET_DONT, option);
     case TELNET_OPT_ECHO:
         return telnet_send_option(fd, TELNET_DONT, option);
     default:
@@ -124,9 +125,17 @@ void mailboxd_telnet_parser_init(mailboxd_telnet_parser_t *parser)
 
 mailboxd_result_t mailboxd_telnet_send_greeting(int fd)
 {
+    /*
+     * Initial option negotiation. We refuse both ECHO and SGA so the
+     * telnet client uses line-buffered local echo — this is the only
+     * mode MailboxD's line editor can drive, and it also avoids the
+     * "client hangs waiting for GA after server FIN" behaviour that
+     * affects inetutils-telnet and Windows telnet when the server
+     * grants SGA but then half-closes the socket.
+     */
     static const uint8_t greeting[] = {
         TELNET_IAC, TELNET_WONT, TELNET_OPT_ECHO,
-        TELNET_IAC, TELNET_WILL, TELNET_OPT_SGA,
+        TELNET_IAC, TELNET_DONT, TELNET_OPT_SGA,
         TELNET_IAC, TELNET_DONT, TELNET_OPT_LINEMODE,
     };
 
