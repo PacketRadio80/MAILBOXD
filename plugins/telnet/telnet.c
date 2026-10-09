@@ -63,16 +63,6 @@ static int set_socket_options(int fd, int family)
 
     mailboxd_socket_nosigpipe(fd);
 
-    /* Short linger on close: ensures the final FIN (and any trailing
-     * data like "Goodbye.") is delivered before the fd is released.
-     * Without this, some stacks (notably Windows and older macOS)
-     * may RST the connection if the client has not read everything
-     * by the time we close(). */
-    {
-        struct linger lg = { .l_onoff = 1, .l_linger = 1 };
-        (void)setsockopt(fd, SOL_SOCKET, SO_LINGER, &lg, sizeof(lg));
-    }
-
 #ifdef IPV6_V6ONLY
     if (family == AF_INET6) {
         if (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(on)) != 0) {
@@ -334,27 +324,17 @@ static void *telnet_client_thread(void *arg)
     mailboxd_session_close(session);
 
     /*
-     * Half-close: send FIN to the client so it sees EOF and can
-     * display the final "Goodbye." before we release the fd.
-     * SHUT_RDWR on some systems (notably FreeBSD) can RST the
-     * connection before the client has read the last bytes.
+     * Close the socket cleanly.  The session_close above has already
+     * sent "Goodbye.\r\n" through telnet_write (TCP_NODELAY ensures
+     * immediate delivery).  A single shutdown(SHUT_WR) sends TCP FIN
+     * so the client sees EOF; then close() releases the fd.
+     *
+     * We intentionally do NOT drain here — some telnet clients
+     * (notably FreeBSD's and PuTTY) block in send() during the
+     * option negotiation teardown, and a recv() drain loop would
+     * hang the server thread until the client times out.
      */
     shutdown(client->fd, SHUT_WR);
-    {
-        /* Drain any remaining client data (telnet IAC etc.) for up
-         * to 200 ms so the FIN is cleanly acknowledged. */
-        struct pollfd pfd;
-        pfd.fd = client->fd;
-        pfd.events = POLLIN;
-        pfd.revents = 0;
-        while (poll(&pfd, 1, 50) > 0 && (pfd.revents & POLLIN) != 0) {
-            uint8_t drain[64];
-            ssize_t dr = recv(client->fd, drain, sizeof(drain), 0);
-            if (dr <= 0) {
-                break;
-            }
-        }
-    }
     close(client->fd);
     free(client);
     return NULL;
