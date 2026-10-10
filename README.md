@@ -7,7 +7,7 @@ additional software to PRTERM — not a part of it.
 **MailboxD has no radio side.** It never talks to a TNC, a modem or a serial
 port. RF is entirely PRTERM's business; MailboxD only serves users.
 
-> **Status: earlier development (0.5.0).**
+> **Status: earlier development (0.6.5).**
 
 ---
 
