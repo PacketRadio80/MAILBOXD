@@ -17,7 +17,7 @@
  *   enabled    = yes
  *   callerid   = MGHBX1          ; AX.25 callsign for MailboxD
  *   interval   = 150             ; seconds between beacon cycles
- *   prterm_url = http://127.0.0.1/prterm/prterm.cgi
+ *   prterm_url = http://127.0.0.1/prterm.cgi
  */
 
 #include "mailboxd/types.h"
