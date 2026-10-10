@@ -96,10 +96,6 @@ static void beacon_config_load(beacon_config_t *bc,
     bc->interval = mailboxd_config_get_uint(config, "beacon",
                                             "interval", BEACON_INTERVAL_MIN,
                                             BEACON_INTERVAL_MIN, 3600);
-
-    v = mailboxd_config_get(config, "beacon", "prterm_url", "");
-    if (v[0] != '\0')
-        mailboxd_strlcpy(bc->prterm_url, v, sizeof bc->prterm_url);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -391,23 +387,14 @@ static void *beacon_thread(void *arg)
              "/var/mailboxd/prterm.sock");
 
     long long rx_last_ts = 0;          /* epoch of last processed RX frame */
-    time_t    last_cq = 0;            /* epoch of last CQ beacon transmit */
-    time_t    last_rx = 0;            /* wall-clock of last detected RX activity */
-    unsigned  rx_tick = RX_POLL_SEC;  /* fires immediately on first cycle */
-
-    /* Use wall-clock time for CQ interval — the RX poll loop can
-     * take many seconds per iteration (HTTP POST + bridge ops),
-     * so counting iterations would delay the beacon by hours.
-     * Fire immediately on startup, then only after `interval`
-     * seconds of radio silence (no RX detected by PRTERM). */
-    last_cq = time(NULL) - (time_t)g_cfg.interval;
-    last_rx = 0;  /* no RX yet → band is silent */
+    unsigned  beacon_tick = g_cfg.interval; /* fires immediately on first cycle */
 
     while (g_running) {
         sleep(1);
         if (!g_running) break;
 
         /* ── RX poll (every RX_POLL_SEC seconds) ─────────────────── */
+        static unsigned rx_tick;
         rx_tick++;
         if (rx_tick >= RX_POLL_SEC) {
             rx_tick = 0;
@@ -436,7 +423,6 @@ static void *beacon_thread(void *arg)
                         if (ts > rx_last_ts) rx_last_ts = ts;
 
                         if (from[0] && text[0]) {
-                            last_rx = time(NULL);  /* band is active */
                             mailboxd_log_info("[beacon] RX from=%s: %.120s",
                                               from, text);
 
@@ -466,19 +452,10 @@ static void *beacon_thread(void *arg)
             }
         }
 
-        /* ── CQ beacon (every `interval` seconds, band must be silent) ── */
-        time_t now = time(NULL);
-        long long since_cq = (long long)(now - last_cq);
-        long long since_rx = last_rx > 0 ? (long long)(now - last_rx) : -1;
-        if (since_cq < (long long)g_cfg.interval) continue;
-        /* Require radio silence: no RX frames detected for ≥ interval. */
-        if (last_rx > 0 && (now - last_rx) < (time_t)g_cfg.interval) {
-            mailboxd_log_warn("[beacon] CQ deferred: since_cq=%llds since_rx=%llds",
-                               since_cq, since_rx);
-            continue;
-        }
-        last_cq = now;
-        mailboxd_log_warn("[beacon] CQ fire: since_cq=%llds since_rx=%llds", since_cq, since_rx);
+        /* ── CQ beacon (every `interval` seconds) ────────────────── */
+        beacon_tick++;
+        if (beacon_tick < g_cfg.interval) continue;
+        beacon_tick = 0;
 
         char enc_cid[128];
         url_encode(g_cfg.callerid, enc_cid, sizeof enc_cid);
@@ -490,14 +467,12 @@ static void *beacon_thread(void *arg)
         snprintf(body, sizeof body, "action=mbox_cqbeacon&callerid=%s&msg=%s",
                  enc_cid, enc_msg);
 
-        mailboxd_log_warn("[beacon] CQ POST to %s", g_cfg.prterm_url);
         char resp[1024];
         if (http_post(g_cfg.prterm_url, body, resp, sizeof resp) != 0) {
             mailboxd_log_warn("[beacon] CQ POST failed");
             continue;
         }
         const char *rbody = http_body(resp);
-        mailboxd_log_warn("[beacon] CQ response: %.120s", rbody);
         if (json_is_ok(rbody)) {
             mailboxd_log_info("[beacon] CQ transmitted");
         } else {

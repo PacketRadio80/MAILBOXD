@@ -1,6 +1,5 @@
 # MailboxD · 1.0.0
-**Official MailboxD Instance - telnet://mailbx1.space:2323**<br>
-<br>
+
 **MailboxD** is the mailbox and BBS (BBX) of the PRTERM stack: mail, chat,
 conference and the `/` commands in plain-text sessions. It is standalone
 additional software to PRTERM — not a part of it.
@@ -8,7 +7,7 @@ additional software to PRTERM — not a part of it.
 **MailboxD has no radio side.** It never talks to a TNC, a modem or a serial
 port. RF is entirely PRTERM's business; MailboxD only serves users.
 
-> **Status: earlier development (0.6.5).**
+> **Status: earlier development (0.5.0).**
 
 ---
 
