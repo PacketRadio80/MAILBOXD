@@ -265,7 +265,7 @@ static int bridge_send_line(int fd, const char *line)
 {
     char buf[2100];
     int n = snprintf(buf, sizeof buf, "%s\n", line);
-    if (n < 0 || (size_t)n >= (int)sizeof buf) return -1;
+    if (n < 0 || (size_t)n >= sizeof buf) return -1;
 
     size_t off = 0;
     size_t len = (size_t)n;
@@ -371,7 +371,7 @@ static long long json_int(const char *json, const char *key)
 /* ---------------------------------------------------------------------- */
 
 static pthread_t     g_thread;
-static volatile int  g_running = 0;
+static volatile sig_atomic_t g_running = 0;
 static beacon_config_t g_cfg;
 
 static void *beacon_thread(void *arg)
@@ -388,13 +388,13 @@ static void *beacon_thread(void *arg)
 
     long long rx_last_ts = 0;          /* epoch of last processed RX frame */
     unsigned  beacon_tick = g_cfg.interval; /* fires immediately on first cycle */
+    unsigned  rx_tick = 0;
 
     while (g_running) {
         sleep(1);
         if (!g_running) break;
 
         /* ── RX poll (every RX_POLL_SEC seconds) ─────────────────── */
-        static unsigned rx_tick;
         rx_tick++;
         if (rx_tick >= RX_POLL_SEC) {
             rx_tick = 0;

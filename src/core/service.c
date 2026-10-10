@@ -37,7 +37,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #if defined(_WIN32)
 #include <windows.h>
 #else
@@ -880,13 +879,12 @@ mailboxd_result_t mailboxd_service_run(mailboxd_service_t *service)
     }
 
     svc->running = 1;
+    unsigned health_tick = 0;
 
     while (svc->running && !g_stop_requested) {
 #if defined(_WIN32)
         Sleep(1000);
 #else
-        static unsigned health_tick;
-
         sleep(1);
 
         /* Periodic health log — every 300s (5 min) */

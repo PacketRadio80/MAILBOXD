@@ -13,6 +13,7 @@
 #include "mailboxd/log.h"
 
 #include <arpa/inet.h>
+#include <signal.h>
 #include <errno.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -40,7 +41,7 @@ static mailboxd_telnet_config_t g_config;
 static pthread_t g_accept_thread;
 static int g_listen_v4 = -1;
 static int g_listen_v6 = -1;
-static volatile int g_telnet_running = 0;
+static volatile sig_atomic_t g_telnet_running = 0;
 
 static mailboxd_result_t telnet_stop(void);
 

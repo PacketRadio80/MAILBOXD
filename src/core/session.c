@@ -19,7 +19,6 @@
 #include "mailboxd/mailboxd.h"
 #include "mailboxd/util.h"
 #include "mailboxd/bandwidth_policy.h"
-#include "mailboxd/instance.h"
 #include "mailboxd/messages.h"
 
 #include <stdio.h>

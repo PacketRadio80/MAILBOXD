@@ -25,7 +25,6 @@
 #include "mailboxd/daemon_wrap.h"
 #include "mailboxd/util.h"
 #include "mailboxd/limits.h"
-#include "mailboxd/instance.h"
 #include "mailboxd/privilege.h"
 
 #include <stdio.h>

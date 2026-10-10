@@ -63,7 +63,7 @@ static mailboxd_service_t *g_service;
 static mailboxd_mailboxd_prterm_config_t g_config;
 static pthread_t g_accept_thread;
 static int g_listen_fd = -1;
-static volatile int g_running = 0;
+static volatile sig_atomic_t g_running = 0;
 
 extern const mailboxd_transport_plugin_t mailboxd_plugin_mailboxd_prterm;
 
