@@ -1,3 +1,5 @@
+**Official BBS available at: telnet://mailbx1.space:2323**
+
 # MailboxD · 1.0.0
 
 **MailboxD** is the mailbox and BBS (BBX) of the PRTERM stack: mail, chat,
