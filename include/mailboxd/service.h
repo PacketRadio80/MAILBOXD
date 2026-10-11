@@ -128,6 +128,9 @@ unsigned mailboxd_service_active_nodes(const mailboxd_service_t *service);
 /** Guest auto-disconnect timeout in seconds (from INI minutes setting). */
 unsigned mailboxd_service_guest_timeout_seconds(const mailboxd_service_t *service);
 
+/** Idle banner re-display interval in seconds (from [auth] idle_banner_sec). */
+unsigned mailboxd_service_idle_banner_seconds(const mailboxd_service_t *service);
+
 struct mailboxd_user_record;
 
 /**

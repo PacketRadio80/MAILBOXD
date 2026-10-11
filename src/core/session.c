@@ -90,6 +90,7 @@ typedef struct mailboxd_session_core {
     int input_echo;
     int bandwidth_paused;
     int bandwidth_disconnect;
+    time_t last_activity;             /* for idle banner re-display */
     unsigned char esc_state;
     char csi_buf[24];
     size_t csi_len;
@@ -1179,6 +1180,7 @@ mailboxd_result_t mailboxd_session_open(mailboxd_service_t *service,
     core->area = MAILBOXD_AREA_MAIN;
     core->area_stack[0] = MAILBOXD_AREA_MAIN;
     core->area_depth = 1;
+    core->last_activity = time(NULL);
 
     {
         const mailboxd_traffic_config_t *traffic = mailboxd_traffic_config_get();
@@ -1402,6 +1404,28 @@ mailboxd_result_t mailboxd_session_handle_input(mailboxd_session_t *session,
         if (expiry_rc != MAILBOXD_OK) {
             return expiry_rc;
         }
+    }
+
+    /* Idle banner re-display: if the user has been silent for more than
+     * 10 minutes (configurable via [auth] idle_banner_sec), re-show
+     * the banner before processing the next input. Skipped when in an
+     * active area (chat, conference, mail compose) to avoid interrupting
+     * ongoing sessions. */
+    {
+        time_t now = time(NULL);
+        unsigned idle_sec = mailboxd_service_idle_banner_seconds(core->service);
+        if (idle_sec > 0 && core->last_activity > 0 &&
+            core->area == MAILBOXD_AREA_MAIN &&
+            !core->mail_composing &&
+            core->chat_channel == 0 &&
+            core->conference_partner[0] == '\0' &&
+            (unsigned)(now - core->last_activity) >= idle_sec) {
+            session_send_banner(core);
+            if (core->logged_in) {
+                mailboxd_session_show_prompt(&core->pub);
+            }
+        }
+        core->last_activity = now;
     }
 
     for (i = 0; i < len; i++) {

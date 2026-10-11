@@ -81,6 +81,7 @@ struct mailboxd_service_internal {
     char prompt[MAILBOXD_PROMPT_MAX];
     unsigned max_online;
     unsigned guest_timeout_minutes;
+    unsigned idle_banner_sec;         /* 0 = disabled, default 600 */
     int login_announce;
     unsigned active_nodes;
     pthread_mutex_t node_lock;
@@ -118,6 +119,7 @@ mailboxd_service_t *mailboxd_service_create(const char *name)
     mailboxd_networks_config_defaults(&svc->networks);
     svc->max_online = MAILBOXD_DEFAULT_MAX_ONLINE;
     svc->guest_timeout_minutes = MAILBOXD_DEFAULT_GUEST_TIMEOUT_MINUTES;
+    svc->idle_banner_sec = 600;
     svc->login_announce = 0;
     svc->active_nodes = 0;
     pthread_mutex_init(&svc->node_lock, NULL);
@@ -342,6 +344,18 @@ unsigned mailboxd_service_guest_timeout_seconds(const mailboxd_service_t *servic
     }
 
     return svc->guest_timeout_minutes * 60u;
+}
+
+unsigned mailboxd_service_idle_banner_seconds(const mailboxd_service_t *service)
+{
+    const struct mailboxd_service_internal *svc =
+        (const struct mailboxd_service_internal *)service;
+
+    if (svc == NULL) {
+        return 600;
+    }
+
+    return svc->idle_banner_sec;
 }
 
 mailboxd_result_t mailboxd_service_guest_assign(mailboxd_service_t *service,
@@ -743,6 +757,10 @@ static void service_apply_auth(struct mailboxd_service_internal *svc,
         MAILBOXD_DEFAULT_GUEST_TIMEOUT_MINUTES, 1u, 24u * 60u);
 
     mailboxd_log_info("[service] guest_timeout_minutes=%u", svc->guest_timeout_minutes);
+
+    svc->idle_banner_sec = mailboxd_config_get_uint(
+        config, "auth", "idle_banner_sec", 600, 0, 86400);
+    mailboxd_log_info("[service] idle_banner_sec=%u", svc->idle_banner_sec);
 }
 
 mailboxd_result_t mailboxd_service_load_transport(mailboxd_service_t *service,
