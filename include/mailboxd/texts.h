@@ -21,6 +21,7 @@ struct mailboxd_session;
 #define MAILBOXD_TEXT_NEWS    "news.txt"
 #define MAILBOXD_TEXT_RULES   "rules.txt"
 #define MAILBOXD_TEXT_VERSION "version.txt"
+#define MAILBOXD_TEXT_SERVER  "server.txt"
 
 /** Substituted in banner.txt / version.txt — MailboxD version number (e.g. 2.4.0). */
 #define MAILBOXD_BANNER_TOKEN_VERSION "@version@"

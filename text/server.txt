@@ -1,0 +1,4 @@
+Server Info
+===========
+This server is running MailboxD @version@
+Operating system: @os@

@@ -186,10 +186,15 @@ static void flush_reply(link_session_t *ls, bool ok, const char *err)
         if (line_len > 0 && buf[line_len - 1] == '\r') {
             line_len -= 1;
         }
-        if (line_len > 0) {
+        {
             char frame[1100];
-            int n = snprintf(frame, sizeof frame, "OUT %.*s\n",
+            int n;
+            if (line_len > 0) {
+                n = snprintf(frame, sizeof frame, "OUT %.*s\n",
                               (int)line_len, buf);
+            } else {
+                n = snprintf(frame, sizeof frame, "OUT \n");
+            }
             if (n > 0) {
                 send_all(ls->fd, frame, (size_t)n);
             }

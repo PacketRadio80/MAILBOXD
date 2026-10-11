@@ -186,6 +186,21 @@ static mailboxd_result_t cmd_news(mailboxd_service_t *service, mailboxd_session_
     return MAILBOXD_OK;
 }
 
+static mailboxd_result_t cmd_server(mailboxd_service_t *service, mailboxd_session_t *session)
+{
+    const mailboxd_texts_config_t *texts = mailboxd_service_get_texts(service);
+
+    if (texts == NULL) {
+        return MAILBOXD_ERR_INVALID;
+    }
+
+    if (mailboxd_texts_send_file(texts, session, MAILBOXD_TEXT_SERVER) != MAILBOXD_OK) {
+        mailboxd_session_write_line(session, "(no server info available)");
+    }
+
+    return MAILBOXD_OK;
+}
+
 static mailboxd_result_t cmd_banner(mailboxd_service_t *service, mailboxd_session_t *session)
 {
     const mailboxd_texts_config_t *texts = mailboxd_service_get_texts(service);
@@ -2029,6 +2044,10 @@ mailboxd_result_t mailboxd_command_dispatch(mailboxd_service_t *service,
 
     if (str_ieq(cmd->verb, "news")) {
         return cmd_news(service, session);
+    }
+
+    if (str_ieq(cmd->verb, "server") || str_ieq(cmd->verb, "server-info")) {
+        return cmd_server(service, session);
     }
 
     if (str_ieq(cmd->verb, "banner") || str_ieq(cmd->verb, "loginmsg")) {

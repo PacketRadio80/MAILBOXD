@@ -50,6 +50,8 @@ aliases:
     - online
   version:
     - ver
+  server:
+    - server-info
   session:
     - info
   leave:
@@ -154,6 +156,12 @@ commands:
     min: Guest
     line1: "/version"
     line2: "Help: Show text/version.txt (@version@ @os@). More: /ver"
+
+  server:
+    group: general
+    min: Guest
+    line1: "/server"
+    line2: "Help: Show text/server.txt. More: /server-info"
 
   clear:
     group: screen

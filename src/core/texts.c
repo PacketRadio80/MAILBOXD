@@ -188,21 +188,15 @@ typedef struct texts_line_emitter {
 static void texts_emit_expanded_line(texts_line_emitter_t *emitter,
                                      const char *expanded)
 {
-    unsigned i;
-
     if (emitter == NULL || emitter->session == NULL || expanded == NULL) {
         return;
     }
 
     if (expanded[0] == '\0') {
-        emitter->pending_blank++;
+        mailboxd_session_write_line(emitter->session, "");
         return;
     }
 
-    for (i = 0; i < emitter->pending_blank; i++) {
-        mailboxd_session_write(emitter->session, "\n");
-    }
-    emitter->pending_blank = 0;
     mailboxd_session_write_line(emitter->session, expanded);
 }
 
@@ -276,17 +270,21 @@ mailboxd_result_t mailboxd_texts_send_banner(const mailboxd_texts_config_t *text
     }
 
     {
-        texts_line_emitter_t emitter;
+     texts_line_emitter_t emitter;
+     int leading_blank = 1;
 
-        emitter.session = session;
-        emitter.pending_blank = 0;
+     emitter.session = session;
 
-        while (fgets(line, sizeof(line), fp) != NULL) {
-            expand_banner_line(expanded, sizeof(expanded), line, version,
-                              service_name, time_text, date_text);
-            texts_trim_trailing_cr(expanded);
-            texts_emit_expanded_line(&emitter, expanded);
-        }
+     while (fgets(line, sizeof(line), fp) != NULL) {
+      expand_banner_line(expanded, sizeof(expanded), line, version,
+          service_name, time_text, date_text);
+      texts_trim_trailing_cr(expanded);
+      if (leading_blank && expanded[0] == '\0') {
+       continue;
+      }
+      leading_blank = 0;
+      texts_emit_expanded_line(&emitter, expanded);
+     }
     }
 
     fclose(fp);
@@ -334,14 +332,18 @@ mailboxd_result_t mailboxd_texts_send_motd(const mailboxd_texts_config_t *texts,
 
     {
         texts_line_emitter_t emitter;
+        int leading_blank = 1;
 
         emitter.session = session;
-        emitter.pending_blank = 0;
 
         while (fgets(line, sizeof(line), fp) != NULL) {
             expand_text_line(expanded, sizeof(expanded), line, NULL, NULL,
                              username, NULL, time_text, date_text);
             texts_trim_trailing_cr(expanded);
+            if (leading_blank && expanded[0] == '\0') {
+                continue;
+            }
+            leading_blank = 0;
             texts_emit_expanded_line(&emitter, expanded);
         }
     }
@@ -388,15 +390,19 @@ mailboxd_result_t mailboxd_texts_send_file(const mailboxd_texts_config_t *texts,
 
     {
         texts_line_emitter_t emitter;
+        int leading_blank = 1;
 
         emitter.session = session;
-        emitter.pending_blank = 0;
 
         while (fgets(line, sizeof(line), fp) != NULL) {
             expand_text_line(expanded, sizeof(expanded), line,
                              MAILBOXD_VERSION_STRING, NULL, NULL, os_name,
                              time_text, date_text);
             texts_trim_trailing_cr(expanded);
+            if (leading_blank && expanded[0] == '\0') {
+                continue;
+            }
+            leading_blank = 0;
             texts_emit_expanded_line(&emitter, expanded);
         }
     }
@@ -456,15 +462,19 @@ mailboxd_result_t mailboxd_texts_send_version(const mailboxd_texts_config_t *tex
 
     {
         texts_line_emitter_t emitter;
+        int leading_blank = 1;
 
         emitter.session = session;
-        emitter.pending_blank = 0;
 
         while (fgets(line, sizeof(line), fp) != NULL) {
             expand_text_line(expanded, sizeof(expanded), line,
                              MAILBOXD_VERSION_STRING, NULL, NULL, os_name,
                              time_text, date_text);
             texts_trim_trailing_cr(expanded);
+            if (leading_blank && expanded[0] == '\0') {
+                continue;
+            }
+            leading_blank = 0;
             texts_emit_expanded_line(&emitter, expanded);
         }
     }

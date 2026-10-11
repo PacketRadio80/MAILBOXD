@@ -16,7 +16,7 @@ Slash-command reference — five access levels: Sysop → Admin → Mod → User
 
 | Group | Commands |
 |-------|----------|
-| General | `/help` `/menu` `/index` `/alias` `/news` `/banner` `/motd` `/rules` `/who` `/users` `/session` `/version` |
+| General | `/help` `/menu` `/index` `/alias` `/news` `/banner` `/motd` `/rules` `/who` `/users` `/session` `/version` `/server` |
 | Screen | `/clear` `/echo` |
 | Areas | `/leave` `/main` `/chat` `/conference` `/mail` `/exit` |
 | Account | `/login` `/register` `/changeme` `/deleteme` |

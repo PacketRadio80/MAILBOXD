@@ -15,7 +15,7 @@ user_groups:
 
 areas:
   - label: General
-    commands: [help, menu, index, alias, news, banner, motd, rules, who, users, session, version]
+    commands: [help, menu, index, alias, news, banner, motd, rules, who, users, session, version, server]
   - label: Screen
     commands: [clear, echo]
   - label: Areas
