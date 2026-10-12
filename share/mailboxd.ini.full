@@ -10,7 +10,7 @@ name            = MAILBX              ; Station callsign (banners, logs)
 user            = lighttpd            ; Drop-privilege user after port bind
 group           = lighttpd            ; Drop-privilege group
 login_announce  = no                  ; Notify other users on login/logout
-prompt          =                     ; Command prompt string (empty = off)
+prompt          = >                    ; Command prompt string (empty = off)
 max_online      = 0                   ; Max simultaneous sessions (0 = ∞)
 nodes           = 0                   ; Virtual node count for /nodes display
 

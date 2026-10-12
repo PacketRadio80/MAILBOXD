@@ -30,4 +30,4 @@ mailboxd_result_t mailboxd_beacon_start(const struct mailboxd_config *config);
 /** Stop the beacon daemon thread. */
 void mailboxd_beacon_stop(void);
 
-#endif /* MAILBOXD_BEACON_H */
+#endif /* MAILBOXD_BEACON_H */#endif /* MAILBOXD_BEACON_H */

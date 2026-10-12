@@ -1,5 +1,3 @@
-**Official BBS available at: telnet://mailbx1.space:2323**
-
 # MailboxD · 1.0.0
 
 **MailboxD** is the mailbox and BBS (BBX) of the PRTERM stack: mail, chat,
@@ -9,25 +7,7 @@ additional software to PRTERM — not a part of it.
 **MailboxD has no radio side.** It never talks to a TNC, a modem or a serial
 port. RF is entirely PRTERM's business; MailboxD only serves users.
 
-> **Status: v0.6.5 and mostly developed enough to be used**
-
-## MailboxD-Text / MailboxD-UI
-
-**MailboxD-Text** is the protocol — the text-based command/response layer over
-the unix socket (`RUN /command` → `OUT lines` → `END`). It is the engine that
-drives everything and remains standalone. Telnet access, the PRTERM bridge, and
-all existing features work purely through MailboxD-Text.
-
-**MailboxD-UI** (planned) is a rendering layer on top of MailboxD-Text. PRTERM
-acts as the client/slave, consuming the same text stream and rendering it as a
-richer UI in the browser. MailboxD's role as the server/master does not change
-— it serves the same text protocol, only PRTERM interprets it differently.
-
-Design rules:
-- No changes to existing code unless unavoidable; additions only
-- MailboxD-Text is the protocol, the engine, and the fallback — always
-- MailboxD-UI uses MailboxD-Text as its motor — never replaces it
-- Both options coexist; the user chooses text or UI
+> **Status: development version (0.7.5)**
 
 ---
 

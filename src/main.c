@@ -385,7 +385,7 @@ int main(int argc, char *argv[])
     mailboxd_service_run(service);
 
     if (g_signal_received) {
-        printf("MailboxD: received signal %d (%s) — shutting down.\n",
+        printf("MailboxD: received signal %ld (%s) — shutting down.\n",
                g_signal_received,
                g_signal_received == SIGTERM ? "SIGTERM" :
                g_signal_received == SIGINT  ? "SIGINT"  : "unknown");

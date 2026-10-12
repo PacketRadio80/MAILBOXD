@@ -107,7 +107,7 @@ static int build_inner_argv(char **out, int out_max,
     out[outc++] = (char *)binary;
 
     if (!wrapped_child()) {
-        out[outc++] = "-f";
+        out[outc++] = (char *)"-f";
     }
 
     for (i = 1; i < argc && outc < out_max - 1; i++) {
@@ -141,10 +141,10 @@ static mailboxd_result_t exec_screen_attach(const char *session)
         return MAILBOXD_ERR_IO;
     }
 
-    args[n++] = screen_path;
-    args[n++] = "-r";
-    args[n++] = (char *)session;
-    args[n++] = NULL;
+    args[n++] = (char *)screen_path;
+    args[n++] = (char *)"-r";
+    args[n++] = (char *)(char *)session;
+    args[n++] = (char *)NULL;
 
     execv(screen_path, args);
     fprintf(stderr, "mailboxd: screen attach failed\n");
@@ -162,11 +162,11 @@ static mailboxd_result_t exec_tmux_attach(const char *session)
         return MAILBOXD_ERR_IO;
     }
 
-    args[n++] = tmux_path;
-    args[n++] = "attach";
-    args[n++] = "-t";
-    args[n++] = (char *)session;
-    args[n++] = NULL;
+    args[n++] = (char *)tmux_path;
+    args[n++] = (char *)"attach";
+    args[n++] = (char *)"-t";
+    args[n++] = (char *)(char *)session;
+    args[n++] = (char *)NULL;
 
     execv(tmux_path, args);
     fprintf(stderr, "mailboxd: tmux attach failed\n");
@@ -196,19 +196,19 @@ static mailboxd_result_t spawn_screen(const char *session, const char *binary,
 
     snprintf(wrap_env, sizeof(wrap_env), "%s=1", MAILBOXD_DAEMON_WRAP_ENV);
 
-    args[n++] = screen_path;
-    args[n++] = "-dmS";
-    args[n++] = (char *)session;
-    args[n++] = "env";
-    args[n++] = wrap_env;
+    args[n++] = (char *)screen_path;
+    args[n++] = (char *)"-dmS";
+    args[n++] = (char *)(char *)session;
+    args[n++] = (char *)"env";
+    args[n++] = (char *)wrap_env;
     {
         int i;
 
         for (i = 0; i < innerc; i++) {
-            args[n++] = inner[i];
+            args[n++] = (char *)inner[i];
         }
     }
-    args[n++] = NULL;
+    args[n++] = (char *)NULL;
 
     execv(screen_path, args);
     fprintf(stderr, "mailboxd: screen spawn failed\n");
@@ -238,21 +238,21 @@ static mailboxd_result_t spawn_tmux(const char *session, const char *binary,
 
     snprintf(wrap_env, sizeof(wrap_env), "%s=1", MAILBOXD_DAEMON_WRAP_ENV);
 
-    args[n++] = tmux_path;
-    args[n++] = "new-session";
-    args[n++] = "-d";
-    args[n++] = "-s";
-    args[n++] = (char *)session;
-    args[n++] = "env";
-    args[n++] = wrap_env;
+    args[n++] = (char *)tmux_path;
+    args[n++] = (char *)"new-session";
+    args[n++] = (char *)"-d";
+    args[n++] = (char *)"-s";
+    args[n++] = (char *)(char *)session;
+    args[n++] = (char *)"env";
+    args[n++] = (char *)wrap_env;
     {
         int i;
 
         for (i = 0; i < innerc; i++) {
-            args[n++] = inner[i];
+            args[n++] = (char *)inner[i];
         }
     }
-    args[n++] = NULL;
+    args[n++] = (char *)NULL;
 
     execv(tmux_path, args);
     fprintf(stderr, "mailboxd: tmux spawn failed\n");

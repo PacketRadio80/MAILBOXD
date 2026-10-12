@@ -218,8 +218,18 @@ mailboxd_result_t mailboxd_config_load(mailboxd_config_t *config, const char *pa
 
         *eq = '\0';
         key = trim_inplace(content);
-        value = trim_inplace(eq + 1);
+        /* Only strip leading whitespace from values — trailing
+        * whitespace may be significant (e.g. prompt = "> "). */
+        value = eq + 1;
+        while (*value != '\0' && isspace((unsigned char)*value))
+        value++;
         strip_inline_comment_inplace(value);
+        /* Strip trailing newline/CR but not other whitespace */
+        {
+        size_t vlen = strlen(value);
+        while (vlen > 0 && (value[vlen-1] == '\n' || value[vlen-1] == '\r'))
+        value[--vlen] = '\0';
+        }
 
         len = strlen(value);
         if (len >= 2 &&

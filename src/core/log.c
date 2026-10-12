@@ -285,10 +285,10 @@ static int log_run_tar_bz2(const char *arc_path, char **basenames, int count)
         return -1;
     }
 
-    argv[argc++] = "tar";
-    argv[argc++] = "-C";
+    argv[argc++] = (char *)"tar";
+    argv[argc++] = (char *)"-C";
     argv[argc++] = (char *)g_log_config.dir;
-    argv[argc++] = "-cjf";
+    argv[argc++] = (char *)"-cjf";
     argv[argc++] = (char *)arc_path;
     for (i = 0; i < count; i++) {
         argv[argc++] = basenames[i];
