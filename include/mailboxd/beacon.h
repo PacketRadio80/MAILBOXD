@@ -17,7 +17,10 @@
  *   enabled    = yes
  *   callerid   = MGHBX1          ; AX.25 callsign for MailboxD
  *   interval   = 150             ; seconds between beacon cycles
- *   prterm_url = http://127.0.0.1/prterm.cgi
+ *   prterm_url = <URL of the prterm.cgi endpoint on this host>
+ *                              ; REQUIRED — no built-in default URL.
+ *                              ; The route depends on the web server
+ *                              ; setup, so the operator must set it.
  */
 
 #include "mailboxd/types.h"
@@ -30,4 +33,4 @@ mailboxd_result_t mailboxd_beacon_start(const struct mailboxd_config *config);
 /** Stop the beacon daemon thread. */
 void mailboxd_beacon_stop(void);
 
-#endif /* MAILBOXD_BEACON_H */#endif /* MAILBOXD_BEACON_H */
+#endif /* MAILBOXD_BEACON_H */

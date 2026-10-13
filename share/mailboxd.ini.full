@@ -88,7 +88,9 @@ enabled         = yes                 ; Periodic CQ via PRTERM?
 callerid        = MAILBX              ; AX.25 source callsign
 msg             = MAILBX = online     ; Beacon text (over-the-air)
 interval        = 150                 ; Min seconds between beacons (≥150)
-prterm_url      = http://127.0.0.1/prterm.cgi  ; PRTERM CGI for mbox_cqbeacon POST
+prterm_url      =                       ; REQUIRED: prterm.cgi endpoint of THIS host
+                                        ; (route depends on the web server; no default
+                                        ; is built in — beacon stays off until set)
 
 ; ─── [crypto] ─ Cryptographic backends ─────────────────────────────────
 [crypto]

@@ -1,5 +1,9 @@
 # MailboxD · 1.0.0
 
+`telnet://mailbx1.space:2323`
+
+**Official BBS (MGHBX1)**
+
 **MailboxD** is the mailbox and BBS (BBX) of the PRTERM stack: mail, chat,
 conference and the `/` commands in plain-text sessions. It is standalone
 additional software to PRTERM — not a part of it.

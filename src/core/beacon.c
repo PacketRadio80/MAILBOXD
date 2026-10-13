@@ -16,7 +16,12 @@
  *   enabled    = yes
  *   callerid   = CALLERID
  *   interval   = 150          ; CQ beacon cycle (seconds)
- *   prterm_url = http://127.0.0.1/prterm.cgi
+ *   prterm_url = <URL of the prterm.cgi endpoint on this host>
+ *                          ; REQUIRED — there is NO built-in default URL.
+ *                          ; The route depends on the web server setup
+ *                          ; (/prterm.cgi, ScriptAlias, ...), so the
+ *                          ; operator must set it.  Beacon refuses to
+ *                          ; start when unset or not http://.
  *   stations   = tnc2c,pktn2c,bc0
  *                          ; comma-separated PRTERM station names.
  *                          ; Each gets its own HTTP request with station=
@@ -43,6 +48,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -78,9 +84,6 @@ static void beacon_config_defaults(beacon_config_t *bc)
     bc->enabled   = 0;
     bc->interval  = BEACON_INTERVAL_MIN;
     bc->tx_delay  = BEACON_TX_DELAY_DEF;
-    mailboxd_strlcpy(bc->prterm_url,
-                     "http://127.0.0.1/prterm.cgi",
-                     sizeof bc->prterm_url);
 }
 
 static void beacon_config_load(beacon_config_t *bc,
@@ -111,6 +114,10 @@ static void beacon_config_load(beacon_config_t *bc,
     v = mailboxd_config_get(config, "beacon", "stations", "");
     if (v[0] != '\0')
         mailboxd_strlcpy(bc->stations, v, sizeof bc->stations);
+
+    v = mailboxd_config_get(config, "beacon", "prterm_url", "");
+    if (v[0] != '\0')
+        mailboxd_strlcpy(bc->prterm_url, v, sizeof bc->prterm_url);
 
     bc->tx_delay = mailboxd_config_get_uint(config, "beacon",
                                             "tx_delay", BEACON_TX_DELAY_DEF,
@@ -169,15 +176,27 @@ static size_t url_encode(const char *src, char *dst, size_t dstlen)
     return w;
 }
 
+/* POST `body` to `url`, read the full response into `resp`.
+ * out: http_status  HTTP status code from the status line (0 if the
+ *                   transaction failed before a response arrived)
+ *      elapsed_ms   wall time of the whole request
+ * Returns 0 when a response was received (any status), -1 on a
+ * transport error (errno set). */
 static int http_post(const char *url, const char *body,
-                     char *resp, size_t resp_len)
+                     char *resp, size_t resp_len,
+                     int *http_status, long *elapsed_ms)
 {
     char host[128];
     int  port;
     char path[256];
+    struct timespec t0, t1;
+
+    if (http_status != NULL) *http_status = 0;
+    if (elapsed_ms != NULL) *elapsed_ms = 0;
+    clock_gettime(CLOCK_MONOTONIC, &t0);
 
     if (parse_url(url, host, sizeof host, &port, path, sizeof path) != 0) {
-        mailboxd_log_warn("[beacon] bad URL: %s", url);
+        mailboxd_log_warn("[beacon] event=http result=error reason=bad_url url=%s", url);
         return -1;
     }
 
@@ -240,6 +259,20 @@ static int http_post(const char *url, const char *body,
     }
     resp[off] = '\0';
     close(fd);
+
+    if (http_status != NULL) {
+        int code = 0;
+        if (strncmp(resp, "HTTP/", 5) == 0) {
+            const char *sp = strchr(resp, ' ');
+            if (sp != NULL) code = atoi(sp + 1);
+        }
+        *http_status = code;
+    }
+    if (elapsed_ms != NULL) {
+        clock_gettime(CLOCK_MONOTONIC, &t1);
+        *elapsed_ms = (long)((t1.tv_sec - t0.tv_sec) * 1000L +
+                             (t1.tv_nsec - t0.tv_nsec) / 1000000L);
+    }
     return 0;
 }
 
@@ -397,8 +430,11 @@ static void *beacon_thread(void *arg)
 {
     (void)arg;
 
-    mailboxd_log_info("[beacon] daemon started: callerid=%s msg='%s' interval=%us rxpoll=%us url=%s",
-                      g_cfg.callerid, g_cfg.msg, g_cfg.interval, RX_POLL_SEC, g_cfg.prterm_url);
+    mailboxd_log_info("[beacon] event=start callerid=%s msg='%s' interval=%us rxpoll=%us tx_delay=%us stations='%s' url=%s",
+                      g_cfg.callerid, g_cfg.msg, g_cfg.interval, RX_POLL_SEC,
+                      g_cfg.tx_delay,
+                      g_cfg.stations[0] ? g_cfg.stations : "(default)",
+                      g_cfg.prterm_url);
 
     /* PRTERM socket path: derived from the standard layout. */
     char sock_path[256];
@@ -408,6 +444,7 @@ static void *beacon_thread(void *arg)
     long long rx_last_ts = 0;          /* epoch of last processed RX frame */
     unsigned  beacon_tick = g_cfg.interval; /* fires immediately on first cycle */
     unsigned  rx_tick = 0;
+    unsigned  cq_cycle = 0;            /* CQ cycle counter for log correlation */
 
     while (g_running) {
         sleep(1);
@@ -427,47 +464,66 @@ static void *beacon_thread(void *arg)
                      enc_cid, rx_last_ts);
 
             char resp[4096];
-            if (http_post(g_cfg.prterm_url, body, resp, sizeof resp) == 0) {
+            int  poll_status = 0;
+            long poll_ms = 0;
+            if (http_post(g_cfg.prterm_url, body, resp, sizeof resp,
+                          &poll_status, &poll_ms) != 0) {
+                mailboxd_log_debug("[beacon] event=rx_poll result=error reason=transport errno=%d ms=%ld",
+                                   errno, poll_ms);
+            } else if (json_is_ok(http_body(resp))) {
                 const char *rbody = http_body(resp);
-                if (json_is_ok(rbody)) {
-                    /* Walk the "frames" array manually — find each
-                     * {"from":"…","text":"…","ts":…} object. */
-                    const char *p = rbody;
-                    while ((p = strstr(p, "\"from\":\"")) != NULL) {
-                        char from[32] = "";
-                        char text[512] = "";
-                        json_str(p, "from", from, sizeof from);
-                        json_str(p, "text", text, sizeof text);
-                        long long ts = json_int(p, "ts");
-                        if (ts > rx_last_ts) rx_last_ts = ts;
+                int nframes = 0;
+                /* Walk the "frames" array manually — find each
+                 * {"from":"…","text":"…","ts":…} object. */
+                const char *p = rbody;
+                while ((p = strstr(p, "\"from\":\"")) != NULL) {
+                    char from[32] = "";
+                    char text[512] = "";
+                    json_str(p, "from", from, sizeof from);
+                    json_str(p, "text", text, sizeof text);
+                    long long ts = json_int(p, "ts");
+                    if (ts > rx_last_ts) rx_last_ts = ts;
 
-                        if (from[0] && text[0]) {
-                            mailboxd_log_info("[beacon] RX from=%s: %.120s",
-                                              from, text);
+                    if (from[0] && text[0]) {
+                        nframes++;
+                        mailboxd_log_info("[beacon] event=rx_frame from=%s ts=%lld text='%.120s'",
+                                          from, ts, text);
 
-                            /* Dispatch through the mailboxd_prterm bridge. */
-                            int bfd = bridge_open(sock_path);
-                            if (bfd >= 0) {
-                                if (bridge_hello(bfd) == 0) {
-                                    char run_out[2048];
-                                    /* If the text looks like a command,
-                                     * run it directly; otherwise treat
-                                     * as a chat message. */
-                                    if (text[0] == '/') {
-                                        bridge_run(bfd, text, run_out, sizeof run_out);
-                                    } else {
-                                        char wrapped[600];
-                                        snprintf(wrapped, sizeof wrapped,
-                                                 "/msg %s %s", from, text);
-                                        bridge_run(bfd, wrapped, run_out, sizeof run_out);
-                                    }
+                        /* Dispatch through the mailboxd_prterm bridge. */
+                        int bfd = bridge_open(sock_path);
+                        if (bfd >= 0) {
+                            if (bridge_hello(bfd) == 0) {
+                                char run_out[2048];
+                                /* If the text looks like a command,
+                                 * run it directly; otherwise treat
+                                 * as a chat message. */
+                                if (text[0] == '/') {
+                                    bridge_run(bfd, text, run_out, sizeof run_out);
+                                } else {
+                                    char wrapped[600];
+                                    snprintf(wrapped, sizeof wrapped,
+                                             "/msg %s %s", from, text);
+                                    bridge_run(bfd, wrapped, run_out, sizeof run_out);
                                 }
-                                close(bfd);
+                                mailboxd_log_info("[beacon] event=rx_dispatch from=%s result=ok out='%.120s'",
+                                                  from, run_out);
+                            } else {
+                                mailboxd_log_warn("[beacon] event=rx_dispatch from=%s result=error reason=bridge_hello_failed sock=%s",
+                                                  from, sock_path);
                             }
+                            close(bfd);
+                        } else {
+                            mailboxd_log_warn("[beacon] event=rx_dispatch from=%s result=error reason=bridge_connect_failed sock=%s errno=%d",
+                                              from, sock_path, errno);
                         }
-                        p += 8; /* advance past "from":" */
                     }
+                    p += 8; /* advance past "from":" */
                 }
+                mailboxd_log_debug("[beacon] event=rx_poll result=ok http=%d ms=%ld frames=%d since=%lld",
+                                   poll_status, poll_ms, nframes, rx_last_ts);
+            } else {
+                mailboxd_log_debug("[beacon] event=rx_poll result=skip http=%d ms=%ld response='%.80s'",
+                                   poll_status, poll_ms, http_body(resp));
             }
         }
 
@@ -475,6 +531,7 @@ static void *beacon_thread(void *arg)
         beacon_tick++;
         if (beacon_tick < g_cfg.interval) continue;
         beacon_tick = 0;
+        cq_cycle++;
 
         char enc_cid[128];
         url_encode(g_cfg.callerid, enc_cid, sizeof enc_cid);
@@ -496,6 +553,8 @@ static void *beacon_thread(void *arg)
             mailboxd_strlcpy(buf, g_cfg.stations, sizeof buf);
             char *save = NULL;
             char *tok = strtok_r(buf, ",", &save);
+            mailboxd_log_debug("[beacon] event=cq_cycle cycle=%u stations='%s'",
+                               cq_cycle, g_cfg.stations);
             while (tok && g_running) {
                 /* Trim leading/trailing whitespace. */
                 while (*tok == ' ' || *tok == '\t') tok++;
@@ -510,40 +569,63 @@ static void *beacon_thread(void *arg)
                          base_body, enc_sta);
 
                 char resp[1024];
-                if (http_post(g_cfg.prterm_url, body, resp, sizeof resp) != 0) {
-                    mailboxd_log_warn("[beacon] CQ POST failed (%s)", tok);
+                int  tx_status = 0;
+                long tx_ms = 0;
+                if (http_post(g_cfg.prterm_url, body, resp, sizeof resp,
+                              &tx_status, &tx_ms) != 0) {
+                    mailboxd_log_warn("[beacon] event=cq_tx cycle=%u station=%s result=error reason=transport errno=%d ms=%ld",
+                                      cq_cycle, tok, errno, tx_ms);
                 } else {
                     const char *rbody = http_body(resp);
-                    if (json_is_ok(rbody))
-                        mailboxd_log_info("[beacon] CQ transmitted (%s)", tok);
-                    else
-                        mailboxd_log_debug("[beacon] CQ skipped (%s): %.100s",
-                                           tok, rbody);
+                    if (json_is_ok(rbody)) {
+                        mailboxd_log_info("[beacon] event=cq_tx cycle=%u station=%s result=ok http=%d ms=%ld",
+                                          cq_cycle, tok, tx_status, tx_ms);
+                    } else {
+                        char why[160] = "";
+                        json_str(rbody, "error", why, sizeof why);
+                        mailboxd_log_warn("[beacon] event=cq_tx cycle=%u station=%s result=skip http=%d ms=%ld reason='%s' response='%.100s'",
+                                          cq_cycle, tok, tx_status, tx_ms,
+                                          why[0] ? why : "unknown", rbody);
+                    }
                 }
 
-                /* Delay before next station (skip sleep on last). */
+                /* Delay before next station (skip sleep on last).
+                 * sleep() returns the UNSLEPT seconds, so the remaining
+                 * time is the return value itself (not rem - retval). */
                 tok = strtok_r(NULL, ",", &save);
                 if (tok && g_running && g_cfg.tx_delay > 0) {
                     unsigned rem = g_cfg.tx_delay;
-                    while (rem > 0 && g_running) rem -= sleep(rem);
+                    while (rem > 0 && g_running) rem = sleep(rem);
                 }
             }
         } else {
             /* No station list — single request, PRTERM default station. */
             char resp[1024];
-            if (http_post(g_cfg.prterm_url, base_body, resp, sizeof resp) != 0) {
-                mailboxd_log_warn("[beacon] CQ POST failed");
+            int  tx_status = 0;
+            long tx_ms = 0;
+            mailboxd_log_debug("[beacon] event=cq_cycle cycle=%u stations='(default)'",
+                               cq_cycle);
+            if (http_post(g_cfg.prterm_url, base_body, resp, sizeof resp,
+                          &tx_status, &tx_ms) != 0) {
+                mailboxd_log_warn("[beacon] event=cq_tx cycle=%u station=default result=error reason=transport errno=%d ms=%ld",
+                                  cq_cycle, errno, tx_ms);
             } else {
                 const char *rbody = http_body(resp);
-                if (json_is_ok(rbody))
-                    mailboxd_log_info("[beacon] CQ transmitted");
-                else
-                    mailboxd_log_debug("[beacon] CQ skipped: %.120s", rbody);
+                if (json_is_ok(rbody)) {
+                    mailboxd_log_info("[beacon] event=cq_tx cycle=%u station=default result=ok http=%d ms=%ld",
+                                      cq_cycle, tx_status, tx_ms);
+                } else {
+                    char why[160] = "";
+                    json_str(rbody, "error", why, sizeof why);
+                    mailboxd_log_warn("[beacon] event=cq_tx cycle=%u station=default result=skip http=%d ms=%ld reason='%s' response='%.100s'",
+                                      cq_cycle, tx_status, tx_ms,
+                                      why[0] ? why : "unknown", rbody);
+                }
             }
         }
     }
 
-    mailboxd_log_info("[beacon] daemon stopped");
+    mailboxd_log_info("[beacon] event=stop");
     return NULL;
 }
 
@@ -558,6 +640,22 @@ mailboxd_result_t mailboxd_beacon_start(const mailboxd_config_t *config)
     if (g_cfg.callerid[0] == '\0') {
         mailboxd_log_warn("[beacon] callerid empty — not starting");
         return MAILBOXD_ERR_INVALID;
+    }
+    if (g_cfg.prterm_url[0] == '\0') {
+        mailboxd_log_warn("[beacon] event=config_error reason=prterm_url_missing "
+                          "detail='[beacon] prterm_url must point to the "
+                          "prterm.cgi endpoint of this host — no default is built in'");
+        return MAILBOXD_ERR_INVALID;
+    }
+    {
+        char host[128], path[256];
+        int  port = 0;
+        if (parse_url(g_cfg.prterm_url, host, sizeof host, &port,
+                      path, sizeof path) != 0) {
+            mailboxd_log_warn("[beacon] event=config_error reason=prterm_url_invalid url=%s",
+                              g_cfg.prterm_url);
+            return MAILBOXD_ERR_INVALID;
+        }
     }
 
     g_running = 1;
