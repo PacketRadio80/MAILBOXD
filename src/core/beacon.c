@@ -395,9 +395,7 @@ static const char *json_str(const char *json, const char *key,
         p = strstr(json, needle);
         if (!p) return NULL;
     }
-    p = strchr(p + strlen(needle), '"'); /* skip to value start */
-    if (!p) return NULL;
-    p++;
+    p += strlen(needle); /* value starts right after "key":" */
     size_t w = 0;
     while (*p && *p != '"' && w + 1 < dstlen) {
         if (*p == '\\' && p[1]) p++;
