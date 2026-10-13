@@ -27,3 +27,4 @@ Thumbs.db
 
 # vault/agent — never ship
 AGENT-INDEX.md
+.cache/

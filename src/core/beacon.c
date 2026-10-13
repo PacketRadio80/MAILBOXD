@@ -17,6 +17,12 @@
  *   callerid   = MGHBX1
  *   interval   = 150          ; CQ beacon cycle (seconds)
  *   prterm_url = http://127.0.0.1/prterm.cgi
+ *   stations   = tnc2c,pktn2c,bc0
+ *                          ; comma-separated PRTERM station names.
+ *                          ; Each gets its own HTTP request with station=
+ *                          ; and its own 150 s band-free check in PRTERM.
+ *                          ; Empty = single request, PRTERM default station.
+ *   tx_delay   = 10        ; seconds between station TXes (min 1)
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
@@ -51,7 +57,9 @@
 #define BEACON_CALLERID_MAX  32
 #define BEACON_URL_MAX       256
 #define BEACON_MSG_MAX       128
+#define BEACON_STATIONS_MAX  256
 #define BEACON_INTERVAL_MIN  150
+#define BEACON_TX_DELAY_DEF  10
 #define RX_POLL_SEC           5
 
 typedef struct beacon_config {
@@ -60,13 +68,16 @@ typedef struct beacon_config {
     char       msg[BEACON_MSG_MAX];
     unsigned   interval;
     char       prterm_url[BEACON_URL_MAX];
+    char       stations[BEACON_STATIONS_MAX]; /* comma-separated */
+    unsigned   tx_delay;                       /* seconds between TXes */
 } beacon_config_t;
 
 static void beacon_config_defaults(beacon_config_t *bc)
 {
     memset(bc, 0, sizeof *bc);
-    bc->enabled  = 0;
-    bc->interval = BEACON_INTERVAL_MIN;
+    bc->enabled   = 0;
+    bc->interval  = BEACON_INTERVAL_MIN;
+    bc->tx_delay  = BEACON_TX_DELAY_DEF;
     mailboxd_strlcpy(bc->prterm_url,
                      "http://127.0.0.1/prterm.cgi",
                      sizeof bc->prterm_url);
@@ -96,6 +107,14 @@ static void beacon_config_load(beacon_config_t *bc,
     bc->interval = mailboxd_config_get_uint(config, "beacon",
                                             "interval", BEACON_INTERVAL_MIN,
                                             BEACON_INTERVAL_MIN, 3600);
+
+    v = mailboxd_config_get(config, "beacon", "stations", "");
+    if (v[0] != '\0')
+        mailboxd_strlcpy(bc->stations, v, sizeof bc->stations);
+
+    bc->tx_delay = mailboxd_config_get_uint(config, "beacon",
+                                            "tx_delay", BEACON_TX_DELAY_DEF,
+                                            1, 300);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -463,20 +482,64 @@ static void *beacon_thread(void *arg)
         char enc_msg[256];
         url_encode(g_cfg.msg, enc_msg, sizeof enc_msg);
 
-        char body[512];
-        snprintf(body, sizeof body, "action=mbox_cqbeacon&callerid=%s&msg=%s",
+        /* Build the base POST body (without station=). */
+        char base_body[512];
+        snprintf(base_body, sizeof base_body,
+                 "action=mbox_cqbeacon&callerid=%s&msg=%s",
                  enc_cid, enc_msg);
 
-        char resp[1024];
-        if (http_post(g_cfg.prterm_url, body, resp, sizeof resp) != 0) {
-            mailboxd_log_warn("[beacon] CQ POST failed");
-            continue;
-        }
-        const char *rbody = http_body(resp);
-        if (json_is_ok(rbody)) {
-            mailboxd_log_info("[beacon] CQ transmitted");
+        /* If stations are configured, iterate each one with its own
+         * request.  Each station gets a `station=` param so PRTERM
+         * binds that rig and checks its band-free independently. */
+        if (g_cfg.stations[0] != '\0') {
+            char buf[BEACON_STATIONS_MAX];
+            mailboxd_strlcpy(buf, g_cfg.stations, sizeof buf);
+            char *save = NULL;
+            char *tok = strtok_r(buf, ",", &save);
+            while (tok && g_running) {
+                /* Trim leading/trailing whitespace. */
+                while (*tok == ' ' || *tok == '\t') tok++;
+                char *end = tok + strlen(tok) - 1;
+                while (end > tok && (*end == ' ' || *end == '\t')) *end-- = '\0';
+                if (tok[0] == '\0') { tok = strtok_r(NULL, ",", &save); continue; }
+
+                char enc_sta[64];
+                url_encode(tok, enc_sta, sizeof enc_sta);
+                char body[640];
+                snprintf(body, sizeof body, "%s&station=%s",
+                         base_body, enc_sta);
+
+                char resp[1024];
+                if (http_post(g_cfg.prterm_url, body, resp, sizeof resp) != 0) {
+                    mailboxd_log_warn("[beacon] CQ POST failed (%s)", tok);
+                } else {
+                    const char *rbody = http_body(resp);
+                    if (json_is_ok(rbody))
+                        mailboxd_log_info("[beacon] CQ transmitted (%s)", tok);
+                    else
+                        mailboxd_log_debug("[beacon] CQ skipped (%s): %.100s",
+                                           tok, rbody);
+                }
+
+                /* Delay before next station (skip sleep on last). */
+                tok = strtok_r(NULL, ",", &save);
+                if (tok && g_running && g_cfg.tx_delay > 0) {
+                    unsigned rem = g_cfg.tx_delay;
+                    while (rem > 0 && g_running) rem -= sleep(rem);
+                }
+            }
         } else {
-            mailboxd_log_debug("[beacon] CQ skipped: %.120s", rbody);
+            /* No station list — single request, PRTERM default station. */
+            char resp[1024];
+            if (http_post(g_cfg.prterm_url, base_body, resp, sizeof resp) != 0) {
+                mailboxd_log_warn("[beacon] CQ POST failed");
+            } else {
+                const char *rbody = http_body(resp);
+                if (json_is_ok(rbody))
+                    mailboxd_log_info("[beacon] CQ transmitted");
+                else
+                    mailboxd_log_debug("[beacon] CQ skipped: %.120s", rbody);
+            }
         }
     }
 

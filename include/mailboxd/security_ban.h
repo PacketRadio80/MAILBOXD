@@ -71,6 +71,12 @@ void mailboxd_security_ban_abuse_report(const char *ip, const char *category);
 void mailboxd_security_ban_callid_abuse_report(const char *callid,
                                             const char *category);
 
+/** Track a new session from @p ip — bans if concurrent limit exceeded. */
+void mailboxd_security_session_open(const char *ip);
+
+/** Release a session from @p ip. */
+void mailboxd_security_session_close(const char *ip);
+
 #ifdef __cplusplus
 }
 #endif

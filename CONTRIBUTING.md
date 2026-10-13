@@ -13,11 +13,11 @@ telnet 127.0.0.1 2323
 **Only** this identity — no alternatives:
 
 ```
-user.name  = ngteq
-user.email = info@un1t.me
+user.name  = PR80
+user.email = Issues@Github
 ```
 
-Local `.git/config`. Push **only** via SSH `~/.ssh/id_ed25519_ngteq`.
+Local `.git/config`. Push **only** via SSH `~/.ssh/id_ed25519_PR80`.
 
 ## Pull requests
 

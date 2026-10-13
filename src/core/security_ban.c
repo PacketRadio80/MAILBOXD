@@ -33,6 +33,8 @@ typedef struct mailboxd_security_cfg {
     int telnet;
     unsigned rate_limit;
     unsigned rate_window_sec;
+    unsigned flood_bantime_sec;
+    unsigned max_concurrent;
     mailboxd_ban_backend_t backend;
 } mailboxd_security_cfg_t;
 
@@ -56,6 +58,12 @@ typedef struct rate_entry {
     int active;
 } rate_entry_t;
 
+typedef struct concurrent_entry {
+    char ip[MAILBOXD_REMOTE_ADDR_MAX];
+    unsigned count;
+    int active;
+} concurrent_entry_t;
+
 typedef struct ban_callid_entry {
     char callid[MAILBOXD_CALLID_MAX];
     time_t expire_at;
@@ -77,6 +85,7 @@ static fail_entry_t g_fails[MAILBOXD_SECURITY_TRACK_MAX];
 static fail_entry_t g_abuse[MAILBOXD_SECURITY_TRACK_MAX];
 static callid_track_entry_t g_callid_abuse[MAILBOXD_SECURITY_TRACK_MAX];
 static rate_entry_t g_rates[MAILBOXD_SECURITY_TRACK_MAX];
+static concurrent_entry_t g_concurrent[MAILBOXD_SECURITY_TRACK_MAX];
 static pthread_mutex_t g_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static void security_cfg_defaults(mailboxd_security_cfg_t *cfg)
@@ -94,6 +103,8 @@ static void security_cfg_defaults(mailboxd_security_cfg_t *cfg)
     cfg->telnet = 1;
     cfg->rate_limit = MAILBOXD_SECURITY_DEFAULT_RATE_LIMIT;
     cfg->rate_window_sec = MAILBOXD_SECURITY_DEFAULT_RATE_WINDOW_SEC;
+    cfg->flood_bantime_sec = MAILBOXD_SECURITY_DEFAULT_FLOOD_BANTIME_SEC;
+    cfg->max_concurrent = MAILBOXD_SECURITY_DEFAULT_MAX_CONCURRENT;
     cfg->backend = MAILBOXD_BAN_BACKEND_INTERNAL;
 }
 
@@ -533,6 +544,35 @@ static rate_entry_t *rate_alloc(const char *ip)
     return NULL;
 }
 
+static concurrent_entry_t *concurrent_find(const char *ip)
+{
+    size_t i;
+
+    for (i = 0; i < MAILBOXD_SECURITY_TRACK_MAX; i++) {
+        if (g_concurrent[i].active && strcmp(g_concurrent[i].ip, ip) == 0) {
+            return &g_concurrent[i];
+        }
+    }
+
+    return NULL;
+}
+
+static concurrent_entry_t *concurrent_alloc(const char *ip)
+{
+    size_t i;
+
+    for (i = 0; i < MAILBOXD_SECURITY_TRACK_MAX; i++) {
+        if (!g_concurrent[i].active) {
+            mailboxd_strlcpy(g_concurrent[i].ip, ip, sizeof(g_concurrent[i].ip));
+            g_concurrent[i].count = 0;
+            g_concurrent[i].active = 1;
+            return &g_concurrent[i];
+        }
+    }
+
+    return NULL;
+}
+
 static void prune_fail_window(fail_entry_t *entry, time_t now)
 {
     unsigned i;
@@ -678,6 +718,26 @@ static void apply_ban_locked(const char *ip, const char *reason, time_t now)
     }
 
     ban->expire_at = now + (time_t)g_cfg.bantime_sec;
+    backend_apply(ip, reason);
+}
+
+static void apply_flood_ban_locked(const char *ip, const char *reason, time_t now)
+{
+    ban_entry_t *ban;
+
+    ban = ban_find(ip);
+    if (ban == NULL) {
+        ban = ban_alloc(ip);
+    }
+
+    if (ban == NULL) {
+        return;
+    }
+
+    ban->expire_at = now + (time_t)g_cfg.flood_bantime_sec;
+    mailboxd_log_info("[security] flood ban ip=%s reason=%s duration=%us",
+                      ip, reason != NULL ? reason : "flood",
+                      g_cfg.flood_bantime_sec);
     backend_apply(ip, reason);
 }
 
@@ -846,6 +906,17 @@ void mailboxd_security_ban_config_apply(const struct mailboxd_config *config)
         g_cfg.rate_window_sec =
             parse_uint_clamp(value, g_cfg.rate_window_sec, 3600u);
 
+        value = mailboxd_config_get(config, "security", "flood_bantime", NULL);
+        g_cfg.flood_bantime_sec =
+            parse_uint_clamp(value, g_cfg.flood_bantime_sec, 604800u);
+
+        value = mailboxd_config_get(config, "security", "max_concurrent", NULL);
+        g_cfg.max_concurrent =
+            parse_uint_clamp(value, g_cfg.max_concurrent, 100u);
+        if (g_cfg.max_concurrent < 1u) {
+            g_cfg.max_concurrent = 1u;
+        }
+
         value = mailboxd_config_get(config, "security", "ban_backend", NULL);
         g_cfg.backend = parse_ban_backend(value);
 
@@ -859,10 +930,11 @@ void mailboxd_security_ban_config_apply(const struct mailboxd_config *config)
     if (g_cfg.enabled) {
         mailboxd_log_info("[security] ban enabled maxretry=%u findtime=%us bantime=%us "
                "abuse_maxretry=%u abuse_findtime=%us "
-               "rate_limit=%u/%us backend=%d",
+               "rate_limit=%u/%us flood_bantime=%us max_concurrent=%u backend=%d",
                g_cfg.maxretry, g_cfg.findtime_sec, g_cfg.bantime_sec,
                g_cfg.abuse_maxretry, g_cfg.abuse_findtime_sec,
-               g_cfg.rate_limit, g_cfg.rate_window_sec, (int)g_cfg.backend);
+               g_cfg.rate_limit, g_cfg.rate_window_sec,
+               g_cfg.flood_bantime_sec, g_cfg.max_concurrent, (int)g_cfg.backend);
     }
 }
 
@@ -876,6 +948,7 @@ void mailboxd_security_ban_shutdown(void)
     memset(g_abuse, 0, sizeof(g_abuse));
     memset(g_callid_abuse, 0, sizeof(g_callid_abuse));
     memset(g_rates, 0, sizeof(g_rates));
+    memset(g_concurrent, 0, sizeof(g_concurrent));
     security_cfg_defaults(&g_cfg);
 
     pthread_mutex_unlock(&g_lock);
@@ -983,7 +1056,7 @@ int mailboxd_security_ban_accept(const char *ip)
 
         if (entry != NULL && entry->active &&
             entry->count >= g_cfg.rate_limit) {
-            apply_ban_locked(ip, "rate_limit", now);
+            apply_flood_ban_locked(ip, "rate_limit", now);
             allow = 0;
         } else {
             record_rate_locked(ip, now);
@@ -1070,5 +1143,47 @@ void mailboxd_security_ban_callid_abuse_report(const char *callid,
 
     pthread_mutex_lock(&g_lock);
     record_callid_abuse_locked(norm, category, now);
+    pthread_mutex_unlock(&g_lock);
+}
+
+void mailboxd_security_session_open(const char *ip)
+{
+    concurrent_entry_t *entry;
+
+    if (!g_cfg.enabled || !ip_valid(ip)) {
+        return;
+    }
+
+    pthread_mutex_lock(&g_lock);
+    entry = concurrent_find(ip);
+    if (entry == NULL) {
+        entry = concurrent_alloc(ip);
+    }
+    if (entry != NULL) {
+        entry->count++;
+        if (entry->count > g_cfg.max_concurrent) {
+            apply_flood_ban_locked(ip, "concurrent_limit", time(NULL));
+        }
+    }
+    pthread_mutex_unlock(&g_lock);
+}
+
+void mailboxd_security_session_close(const char *ip)
+{
+    concurrent_entry_t *entry;
+
+    if (!g_cfg.enabled || !ip_valid(ip)) {
+        return;
+    }
+
+    pthread_mutex_lock(&g_lock);
+    entry = concurrent_find(ip);
+    if (entry != NULL && entry->count > 0) {
+        entry->count--;
+        if (entry->count == 0) {
+            entry->active = 0;
+            entry->ip[0] = '\0';
+        }
+    }
     pthread_mutex_unlock(&g_lock);
 }

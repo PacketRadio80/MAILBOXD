@@ -83,6 +83,14 @@ aliases:
   chess:
     - play
     - mv
+  ttt:
+    - tictactoe
+  c4:
+    - connect
+    - connect4
+  hangman:
+    - hm
+    - hang
 
 commands:
   help:
@@ -310,6 +318,24 @@ commands:
     min: User
     line1: "/chess new|join|watch|move|board|resign|draw|list|leave|clear"
     line2: "Help: Entertain chess (Main). Moves: /chess move e2 e4 or /mv e2e4. Alias: /play"
+
+  ttt:
+    group: entertain
+    min: User
+    line1: "/ttt new|join|watch|move|board|resign|list|leave|clear"
+    line2: "Help: Tic-Tac-Toe (multiplayer). Move: /ttt move <row> <col>. Alias: /tictactoe"
+
+  c4:
+    group: entertain
+    min: User
+    line1: "/c4 new|join|watch|drop|board|resign|list|leave|clear"
+    line2: "Help: Connect Four (multiplayer). Drop: /c4 drop <col> 1-7. Aliases: /connect /connect4"
+
+  hangman:
+    group: entertain
+    min: User
+    line1: "/hm new|<letter>|word|board|clear"
+    line2: "Help: Hangman (single-player). Guess: /hm <letter> or /hm word <word>. Aliases: /hangman /hang"
 
 
   aichat:

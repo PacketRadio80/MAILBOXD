@@ -1,0 +1,68 @@
+#!/bin/sh
+#
+# PROVIDE: mailboxd
+# REQUIRE: LOGIN NETWORKING
+# KEYWORD: shutdown
+#
+# /etc/rc.conf:
+#   mailboxd_enable="YES"
+
+. /etc/rc.subr
+
+name="mailboxd"
+rcvar="${name}_enable"
+
+load_rc_config $name
+
+: ${mailboxd_enable:="NO"}
+
+pidfile="/var/mailboxd/mailboxd.pid"
+
+start_cmd="mailboxd_start"
+stop_cmd="mailboxd_stop"
+status_cmd="mailboxd_status"
+
+mailboxd_start()
+{
+    if [ -f "${pidfile}" ] && kill -0 $(cat "${pidfile}") 2>/dev/null; then
+        echo "${name} already running? (pid=$(cat ${pidfile}))."
+        return 1
+    fi
+
+    if [ ! -x /var/mailboxd/mailboxd ]; then
+        echo "/var/mailboxd/mailboxd not found or not executable"
+        return 1
+    fi
+
+    mkdir -p /var/mailboxd/logs
+    chown lighttpd:lighttpd /var/mailboxd/logs
+
+    cd /var/mailboxd
+    /usr/sbin/daemon -p "${pidfile}" -u lighttpd \
+        /var/mailboxd/mailboxd -c /var/mailboxd/mailboxd.ini
+
+    echo "Starting ${name}."
+}
+
+mailboxd_stop()
+{
+    if [ ! -f "${pidfile}" ]; then
+        echo "${name} not running?"
+        return 1
+    fi
+    kill $(cat "${pidfile}") 2>/dev/null
+    rm -f "${pidfile}"
+    echo "Stopping ${name}."
+}
+
+mailboxd_status()
+{
+    if [ -f "${pidfile}" ] && kill -0 $(cat "${pidfile}") 2>/dev/null; then
+        echo "${name} is running as pid $(cat ${pidfile})."
+    else
+        echo "${name} is not running."
+        rm -f "${pidfile}" 2>/dev/null
+    fi
+}
+
+run_rc_command "$1"

@@ -256,6 +256,7 @@ static void *telnet_client_thread(void *arg)
 
         if (mailboxd_socket_peer_name(client->fd, remote, sizeof(remote)) == MAILBOXD_OK) {
             (void)mailboxd_session_set_remote(session, remote);
+            mailboxd_security_session_open(remote);
         }
     }
 
@@ -317,6 +318,11 @@ static void *telnet_client_thread(void *arg)
 
     {
         const char *uname = mailboxd_session_username(session);
+        char remote[64];
+
+        if (mailboxd_socket_peer_name(client->fd, remote, sizeof(remote)) == MAILBOXD_OK) {
+            mailboxd_security_session_close(remote);
+        }
         mailboxd_log_info("[telnet] session end: user=%s fd=%d last_rc=%d",
                        (uname && uname[0]) ? uname : "?",
                        client->fd, (int)tctx.last_rc);

@@ -5,6 +5,12 @@ add_library(mailboxd_plugin_entertain STATIC
     entertain.c
     chess.c
     chess_cmd.c
+    ttt.c
+    ttt_cmd.c
+    c4.c
+    c4_cmd.c
+    hangman.c
+    hangman_cmd.c
 )
 
 find_package(Threads REQUIRED)

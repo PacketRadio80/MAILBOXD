@@ -12,6 +12,9 @@
 #include "mailboxd/log.h"
 #include "mailboxd/config.h"
 #include "entertain_chess.h"
+#include "entertain_ttt.h"
+#include "entertain_c4.h"
+#include "entertain_hangman.h"
 
 /* aichat is frozen — the source is kept but neither built nor called. Set this
  * to 1 and add aichat.c back to plugins/entertain/CMakeLists.txt to rebuild it. */
@@ -31,6 +34,18 @@ extern mailboxd_result_t entertain_cmd_chess(struct mailboxd_service *service,
                                           struct mailboxd_session *session,
                                           const struct mailboxd_parsed_command *cmd);
 
+extern mailboxd_result_t entertain_cmd_ttt(struct mailboxd_service *service,
+                                          struct mailboxd_session *session,
+                                          const struct mailboxd_parsed_command *cmd);
+
+extern mailboxd_result_t entertain_cmd_c4(struct mailboxd_service *service,
+                                          struct mailboxd_session *session,
+                                          const struct mailboxd_parsed_command *cmd);
+
+extern mailboxd_result_t entertain_cmd_hangman(struct mailboxd_service *service,
+                                              struct mailboxd_session *session,
+                                              const struct mailboxd_parsed_command *cmd);
+
 static int verb_is_chess(const char *verb)
 {
     if (verb == NULL) {
@@ -41,10 +56,42 @@ static int verb_is_chess(const char *verb)
            strcmp(verb, "mv") == 0;
 }
 
+static int verb_is_ttt(const char *verb)
+{
+    if (verb == NULL) {
+        return 0;
+    }
+    return strcmp(verb, "ttt") == 0 ||
+           strcmp(verb, "tictactoe") == 0;
+}
+
+static int verb_is_c4(const char *verb)
+{
+    if (verb == NULL) {
+        return 0;
+    }
+    return strcmp(verb, "c4") == 0 ||
+           strcmp(verb, "connect") == 0 ||
+           strcmp(verb, "connect4") == 0;
+}
+
+static int verb_is_hangman(const char *verb)
+{
+    if (verb == NULL) {
+        return 0;
+    }
+    return strcmp(verb, "hangman") == 0 ||
+           strcmp(verb, "hm") == 0 ||
+           strcmp(verb, "hang") == 0;
+}
+
 static mailboxd_result_t entertain_init(struct mailboxd_service *service)
 {
     g_service = service;
     chess_init(CHESS_DEFAULT_MAX);
+    ttt_init(TTT_DEFAULT_MAX);
+    c4_init(C4_DEFAULT_MAX);
+    hangman_init(HANGMAN_DEFAULT_MAX);
 #if MAILBOXD_ENTERTAIN_AICHAT
     {
         const char *cfg_path = mailboxd_service_config_path(service);
@@ -57,8 +104,9 @@ static mailboxd_result_t entertain_init(struct mailboxd_service *service)
         }
     }
 #endif
-    mailboxd_log_info("[entertain] plugin loaded — chess_max_games=%u",
-                   (unsigned)CHESS_DEFAULT_MAX);
+    mailboxd_log_info("[entertain] plugin loaded — chess_max_games=%u ttt=%u c4=%u hangman=%u",
+                   (unsigned)CHESS_DEFAULT_MAX, (unsigned)TTT_DEFAULT_MAX,
+                   (unsigned)C4_DEFAULT_MAX, (unsigned)HANGMAN_DEFAULT_MAX);
     return MAILBOXD_OK;
 }
 
@@ -67,6 +115,9 @@ static void entertain_shutdown(void)
 #if MAILBOXD_ENTERTAIN_AICHAT
     aichat_shutdown();
 #endif
+    hangman_shutdown();
+    c4_shutdown();
+    ttt_shutdown();
     chess_shutdown();
     g_service = NULL;
     mailboxd_log_info("[entertain] plugin unloaded");
@@ -75,6 +126,9 @@ static void entertain_shutdown(void)
 static void entertain_tick(struct mailboxd_service *service)
 {
     chess_tick(service);
+    ttt_tick(service);
+    c4_tick(service);
+    hangman_tick(service);
 }
 
 static mailboxd_result_t entertain_on_command(struct mailboxd_service *service,
@@ -104,6 +158,18 @@ static mailboxd_result_t entertain_on_command(struct mailboxd_service *service,
 
     if (verb_is_chess(cmd->verb)) {
         return entertain_cmd_chess(service, session, cmd);
+    }
+
+    if (verb_is_ttt(cmd->verb)) {
+        return entertain_cmd_ttt(service, session, cmd);
+    }
+
+    if (verb_is_c4(cmd->verb)) {
+        return entertain_cmd_c4(service, session, cmd);
+    }
+
+    if (verb_is_hangman(cmd->verb)) {
+        return entertain_cmd_hangman(service, session, cmd);
     }
 
     return MAILBOXD_ERR_NOT_FOUND;

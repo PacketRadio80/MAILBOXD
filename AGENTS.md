@@ -38,7 +38,7 @@ side** — no TNC, modem or serial port code; RF is PRTERM's business.
 9. **Commands:** user groups are Sysop, Admin, Mod, User, Guest only (no “Staff”). Help: two lines (`/<verb> …` + `Help: …`); headers use `/help <cmd> for more`. Output: one blank line before `/command` reply, none after (not chat/mail compose). `/broadcast` (alias `/announce`) = Sysop → all online users on the local instance.
 10. **Version:** current `MAILBOXD_VERSION_STRING` only in code and brief doc headers. As-is software — compact text, no upgrade/history bloat.
 11. **Documentation — Linux-based.** Operator docs in `docs/`, `text/`, README, and share examples assume Linux (`HTTPD_DOCROOT`, `systemctl`, `ss`). Platform targets belong in [PLATFORMS.md](docs/PLATFORMS.md) only — each OS in its own section (Linux, AmigaOS 3.9+, *BSD [FreeBSD, NetBSD, OpenBSD, …], **MacOS X+**, **Windows 10+**; spell **MacOS**, not macOS). Do not mix MacOS into *BSD rubrics elsewhere.
-12. **Git** — no commit/push unless the user asks. **Only** `ngteq <info@un1t.me>` for author/committer (`.git/config`). Push **only** via `~/.ssh/id_ed25519_ngteq`.
+12. **Git** — no commit/push unless the user asks. **Only** `PR80 <Issues@Github>` for author/committer (`.git/config`). Push **only** via `~/.ssh/id_ed25519_PR80`.
 
 ## Doc map
 

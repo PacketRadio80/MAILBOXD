@@ -8,8 +8,6 @@ additional software to PRTERM — not a part of it.
 port. RF is entirely PRTERM's business; MailboxD only serves users.
 
 > **Status: development version (0.7.5)**
->
-> **Official auto-login BBS: telnet://mailbx1.space:2323**
 
 ---
 

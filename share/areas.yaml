@@ -27,7 +27,7 @@ areas:
   - label: Monitor
     commands: [monitor]
   - label: Entertain
-    commands: [chess, aichat]
+    commands: [chess, ttt, c4, hangman, aichat]
   - label: Sysop
     commands: [deleteuser, shutdown, restart, broadcast]
 
