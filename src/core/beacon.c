@@ -9,12 +9,12 @@
  *
  * 2. RX LISTENER — every 5 seconds, polls PRTERM for received AX.25
  *    frames addressed to this MailboxD instance's callerid (e.g.
- *    MGHBX1).  New frames are dispatched as commands through the
- *    mailboxd_prterm bridge.
+ *    from [beacon] callerid in mailboxd.ini).  New frames are
+ *    dispatched as commands through the mailboxd_prterm bridge.
  *
  * INI: [beacon]
  *   enabled    = yes
- *   callerid   = MGHBX1
+ *   callerid   = CALLERID
  *   interval   = 150          ; CQ beacon cycle (seconds)
  *   prterm_url = http://127.0.0.1/prterm.cgi
  *   stations   = tnc2c,pktn2c,bc0
@@ -100,7 +100,7 @@ static void beacon_config_load(beacon_config_t *bc,
     if (v[0] != '\0')
         mailboxd_strlcpy(bc->msg, v, sizeof bc->msg);
     else if (bc->callerid[0] != '\0') {
-        /* Default: "MGHBX1 = online" (callerid = online). */
+        /* Default: "<callerid> = online" (from [beacon] callerid). */
         snprintf(bc->msg, sizeof bc->msg, "%s = online", bc->callerid);
     }
 
